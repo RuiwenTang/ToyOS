@@ -1,0 +1,13 @@
+[binaries]
+c = 'i686-floppy-elf-gcc'
+cpp = 'i686-floppy-elf-g++'
+ar = 'i686-floppy-elf-ar'
+strip = 'i686-floppy-elf-strip'
+ld = 'i686-floppy-elf-ld'
+
+[host_machine]
+system = 'MacOS'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'
+
