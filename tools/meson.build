@@ -1,6 +1,7 @@
 
+prog_python = import('python').find_installation('python3')
 
-executable(
+mk_floppy = executable(
   'mk_floppy',
   native: true,
   sources: [
@@ -20,5 +21,12 @@ executable(
   ]
 )
 
-
+floop_img = custom_target(
+  'gen_floppy',
+  output: 'floppy.img',
+  input: ['gen_floppy.py', mk_floppy, stage1_boot ],
+  command: [
+    prog_python, '@INPUT@', '@OUTPUT@',
+  ],
+)
 

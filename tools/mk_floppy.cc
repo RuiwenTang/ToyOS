@@ -110,7 +110,7 @@ int main(int argc, const char **argv) {
   }
 
   if (res == FR_OK) {
-    std::ofstream out_fs("floppy.img", std::ios::out | std::ios::binary);
+    std::ofstream out_fs(argv[1], std::ios::out | std::ios::binary);
 
     g_floppy->disk[0x1BE] |= 0x80;
 

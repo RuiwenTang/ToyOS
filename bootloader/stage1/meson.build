@@ -24,7 +24,7 @@ boot_link_args = [
 
 
 
-executable(
+stage1_boot = executable(
   'boot.bin',
   asm_gen.process('boot.asm'),
   include_directories: [],
