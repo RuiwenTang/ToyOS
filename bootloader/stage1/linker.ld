@@ -12,7 +12,7 @@ SECTIONS
     .fsjump             : { *(.fsjump)           }
 
     /* Section reserved for file system headers. */
-    .fsheaders          : { *(.fsheaders)       }
+    /* .fsheaders          : { *(.fsheaders)       } */
 
     /* Entry section, which shouldn't be too far down the file (the near jump in
        .fsjump is limited to 127 bytes)

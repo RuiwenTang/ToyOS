@@ -1,0 +1,20 @@
+{
+    "mesonbuild.buildFolder": "build",
+    "mesonbuild.configureOptions": [
+        "--buildtype=debug",
+        "--cross-file",
+        "floopy-os-crossfile.txt",
+    ],
+    "editor.renderWhitespace": "boundary",
+    "C_Cpp.autocomplete": "Disabled",
+    "C_Cpp.formatting": "Disabled",
+    "C_Cpp.errorSquiggles": "Disabled",
+    "C_Cpp.intelliSenseEngine": "Disabled",
+    "clangd.arguments": [
+      "--background-index",
+      "--completion-style=detailed",
+      "--header-insertion=never",
+      "--compile-commands-dir=build",
+    ],
+    "editor.formatOnSave": true
+}

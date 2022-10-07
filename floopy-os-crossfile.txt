@@ -4,6 +4,7 @@ cpp = 'i686-floppy-elf-g++'
 ar = 'i686-floppy-elf-ar'
 strip = 'i686-floppy-elf-strip'
 ld = 'i686-floppy-elf-ld'
+as = 'nasm'
 
 [host_machine]
 system = 'MacOS'
