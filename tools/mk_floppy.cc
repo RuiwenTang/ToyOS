@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 struct RamFloppy {
@@ -20,6 +21,17 @@ extern "C" {
 //     {0, 2},          /* "1:" ==> 2nd partition in PD#0 */
 //     {1, 0}           /* "2:" ==> PD#1 as removable drive */
 // };
+
+#pragma pack(push, 1)
+struct PTE {
+  BYTE dr_attr;
+  BYTE chs_start[3];
+  BYTE partion_type;
+  BYTE chs_end[3];
+  unsigned int lba_start;
+  unsigned int n_sec;
+};
+#pragma pack(pop)
 
 /**
  * Only support ram disk in memory
@@ -106,6 +118,13 @@ int main(int argc, const char **argv) {
 
     out_fs.close();
   }
+
+  std::cout << "sizeof PTE " << sizeof(struct PTE) << std::endl;
+
+  struct PTE *p_pte = (struct PTE *)(g_floppy->disk.data() + 446);
+
+  std::cout << "start lba: " << p_pte->lba_start << std::endl;
+  std::cout << "count sector: " << p_pte->n_sec << std::endl;
 
   return 0;
 }
