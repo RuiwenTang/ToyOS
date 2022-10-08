@@ -1,7 +1,7 @@
 #! /bin/bash
 
 export PREFIX="$HOME/osdev/toolchain"
-export TARGET=i686-floppy-elf
+export TARGET=i686-toy-elf
 export PATH="$PREFIX/bin:$PATH"
 export CROSS_SYSROOT="$HOME/osdev/sysroot"
 
