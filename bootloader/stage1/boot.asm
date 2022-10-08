@@ -16,12 +16,11 @@ start:
     mov si, hello_world_msg
     call print
 
-    mov ah, 0x11
+    mov ah, 0x41
     mov bx, 0x55AA
-    ;mov dl, 0x80
     stc
     int 0x13
-    jz done
+    jnc done                ; support
     mov si, lba_no_support
     call print
 
