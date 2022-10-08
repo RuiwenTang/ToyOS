@@ -1,5 +1,8 @@
 bits 16
 
+; macros
+%define ENDL 0x0D, 0x0A
+
 ; flat boot sector used to load kernel kernel
 section .entry
 global start
@@ -20,11 +23,11 @@ start:
     mov bx, 0x55AA
     stc
     int 0x13
-    jnc done                ; support
+    jnc start.done                ; support
     mov si, lba_no_support
     call print
 
-done:
+.done:
     jmp $
 
 
@@ -41,7 +44,7 @@ print:
 .loop:
     lodsb      ; load DS:SI into AL
     or al, al   ; check if al is 0
-    jz .done
+    jz print.done
 
     mov ah, 0x0E
     mov bl, 0x04
