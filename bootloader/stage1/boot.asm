@@ -16,6 +16,16 @@ start:
     mov si, hello_world_msg
     call print
 
+    mov ah, 0x11
+    mov bx, 0x55AA
+    ;mov dl, 0x80
+    stc
+    int 0x13
+    jz done
+    mov si, lba_no_support
+    call print
+
+done:
     jmp $
 
 
@@ -50,3 +60,6 @@ section .rodata
 ; read only data
 hello_world_msg:
     db  "Hello World!", 0
+
+lba_no_support:
+    db "int 0x13 not support LBA!", 0
