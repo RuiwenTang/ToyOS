@@ -21,9 +21,9 @@ mk_floppy = executable(
   ]
 )
 
-floop_img = custom_target(
-  'gen_floppy',
-  output: 'floppy.img',
+disk_img = custom_target(
+  'gen_disk',
+  output: 'disk.img',
   input: ['gen_floppy.py', mk_floppy, stage1_boot ],
   command: [
     prog_python, '@INPUT@', '@OUTPUT@',

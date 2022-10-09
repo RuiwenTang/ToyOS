@@ -6,10 +6,12 @@
 #include <iostream>
 #include <vector>
 
+#define SECTOR_COUNT 0x2800
+
 struct RamFloppy {
   std::vector<BYTE> disk;
 
-  RamFloppy() : disk(512 * 2880) {}
+  RamFloppy() : disk(512 * SECTOR_COUNT) {}
 };
 
 RamFloppy *g_floppy = nullptr;
@@ -71,7 +73,7 @@ DSTATUS RAM_disk_write(const BYTE *buf, LBA_t sector, UINT count) {
 DSTATUS RAM_disk_ioctl(BYTE cmd, void *buff) {
 
   if (cmd == GET_SECTOR_COUNT) {
-    *(LBA_t *)buff = 2880;
+    *(LBA_t *)buff = SECTOR_COUNT;
   }
 
   return 0;
