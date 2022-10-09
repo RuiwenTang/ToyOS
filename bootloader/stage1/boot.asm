@@ -23,12 +23,28 @@ start:
     mov bx, 0x55AA
     stc
     int 0x13
-    jnc start.done                ; support
-    mov si, lba_no_support
-    call print
+    jc start.lba_no_support                ; no support
+
+    ; just for debug try read 1 sector
+    mov bx, 0x8000
+    mov eax, 0x1
+    mov cx, 1
+    clc
+    call read_sectors
+    jc start.read_failed
 
 .done:
     jmp $
+
+.lba_no_support:
+    mov si, lba_no_support
+    call print
+    jmp start.done
+
+.read_failed:
+    mov si, read_disk_failed
+    call print
+    jmp start.done
 
 
 ; Prints a string to the screen
@@ -58,10 +74,45 @@ print:
     pop si
     ret
 
+; AX = start sector number
+; CX = sector count to read
+; DL = Drive number
+; ES = Buffer segment
+; BX = Buffer offset
+; OUT:
+; Carry if error
+read_sectors:
+    mov si, read_param
+    mov byte [si], 0x10
+    mov byte [si + 1], 0
+    mov word [si + 2], ax
+    mov word [si + 4], bx
+    mov word [si + 6], es
+    mov dword [si + 8], eax
+    mov dword [si + 12], 0
+
+    mov al, 0
+    mov ah, 0x42
+    int 0x13
+    ret
+
+section .data
+; read write data
+; offset: 0 -> size of DAP (set this to 10h)
+; offset: 1 -> unused set zero
+; offset: 2 -> 2 bytes. number of sector to read
+; offset: 4 -> 4 bytes. segment:offset pointer to the memory buffer to which sectors will be transferred
+; offset: 8 -> 8 bytes. absolute number of the start of the sectors to be read
+read_param:
+    resb 16
+
 section .rodata
 ; read only data
 hello_world_msg:
-    db  "Hello World!", 0
+    db  "Hello World!", ENDL, 0
 
 lba_no_support:
-    db "int 0x13 not support LBA!", 0
+    db "int 0x13 not support LBA!", ENDL, 0
+
+read_disk_failed:
+    db "read disk failed!", ENDL, 0

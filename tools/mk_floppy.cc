@@ -111,10 +111,11 @@ int main(int argc, const char **argv) {
     res = f_close(&fil);
   }
 
+  auto *test_p = reinterpret_cast<int *>(g_floppy->disk.data() + 512);
+  *test_p = 0xaafcfdab;
+
   if (res == FR_OK) {
     std::ofstream out_fs(argv[1], std::ios::out | std::ios::binary);
-
-    g_floppy->disk[0x1BE] |= 0x80;
 
     out_fs.write((char *)g_floppy->disk.data(), g_floppy->disk.size());
 
