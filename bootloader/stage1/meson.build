@@ -1,14 +1,7 @@
 
-boot_c_args = [
-  '-ffreestanding',
-  '-fno-builtin',
-  '-nostdlib',
-  '-nostdinc',
-]
 
-nasm = find_program('nasm', required: true)
 
-asm_gen = generator(nasm,
+stage1_asm = generator(nasm,
   output : '@BASENAME@.o',
   arguments : [
     '-f', 'elf32',
@@ -26,10 +19,10 @@ boot_link_args = [
 
 stage1_boot = executable(
   'boot.bin',
-  asm_gen.process('boot.asm'),
+  stage1_asm.process(['boot.asm']),
   include_directories: [],
   link_args: boot_link_args,
-  c_args: boot_c_args,
+  c_args: [],
   cpp_args: [],
 )
 

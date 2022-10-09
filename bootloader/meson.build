@@ -1,4 +1,5 @@
 
+
 subdir('stage1')
 
-# subdir('stage2')
+subdir('stage2')
