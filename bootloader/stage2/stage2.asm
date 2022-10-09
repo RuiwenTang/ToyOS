@@ -70,11 +70,11 @@ enable_a20:
     cmp ax, 1
     je enable_a20.success
 
-.failed
+.failed:
     mov si, msg_a20_failed
     call print
     ret
-.success
+.success:
     mov si, msg_a20_enabled
     call print
     ret
