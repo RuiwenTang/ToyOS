@@ -33,6 +33,7 @@ start:
     call read_sectors
     jc start.read_failed
 
+    jmp 0x8000
 .done:
     jmp $
 

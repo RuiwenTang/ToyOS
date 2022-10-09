@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <vector>
 
 #define SECTOR_COUNT 0x2800
@@ -113,6 +114,21 @@ int main(int argc, const char **argv) {
 
   auto *test_p = reinterpret_cast<int *>(g_floppy->disk.data() + 512);
   *test_p = 0xaafcfdab;
+
+  std::cout << "stage2 file: " << argv[2] << std::endl;
+
+  {
+    std::ifstream stage2_stream(argv[2], std::ios::in | std::ios::binary);
+
+    std::vector<BYTE> stage2_bin{
+        (std::istreambuf_iterator<char>(stage2_stream)),
+        std::istreambuf_iterator<char>()};
+
+    std::cout << "size of stage2 file: " << stage2_bin.size() << std::endl;
+
+    std::memcpy(g_floppy->disk.data() + 512, stage2_bin.data(),
+                stage2_bin.size());
+  }
 
   if (res == FR_OK) {
     std::ofstream out_fs(argv[1], std::ios::out | std::ios::binary);

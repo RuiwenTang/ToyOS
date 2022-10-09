@@ -9,7 +9,10 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/tools/mk_floppy",
-            "args": [],
+            "args": [
+                "${workspaceFolder}/build/tools/disk.img",
+                "${workspaceFolder}/build/bootloader/stage2/stage2.bin"
+            ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
