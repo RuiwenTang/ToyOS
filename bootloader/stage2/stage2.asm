@@ -24,9 +24,30 @@ entry:
     cli                     ; disable interrupt
     ; switch to protect mode
     call enable_a20         ; 2 - Enable A20 gate
+    call load_gdt           ; 3 - Load GDT
 
+    ; 4 - set protection enable flag in CR0
+    mov eax, cr0
+    or al, 1
+    mov cr0, eax
+
+    ; 5 - far jump into protected mode
+    jmp dword 0x08:entry.pmode
     
 .done:
+    jmp $
+
+.pmode:
+    ; 6 - setup segment registers
+    mov ax, 0x10
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    push dword 0x1
+    push dword 0x2
+    call stage2_main
     jmp $
 
 enable_a20:
@@ -166,10 +187,38 @@ a20_wait_input:
     jnz a20_wait_input
     ret
 
+load_gdt:
+    lgdt [stage2_gdt_desc]
+    ret
+
 section .data
 ; save boot driver number
 boot_disk_driver:
     db 0
+
+; GDT for stage2, only
+; kernel will reset ged in future
+stage2_gdt:
+    ; first always NULL
+    dq  0
+    ; 32 bits code segment 
+    dw 0xFFFF                   ; limit (bits 0-15)  0xFFFFF for full 32-bit range
+    dw 0x0                      ; base (bits 0-15)   0x0
+    db 0x0                      ; base (bits 16-23)  0x0
+    db 10011010b                ; access (present, ring 0, code segment, executable, direction 0, readable)
+    db 11001111b             ; granularity (4k pages, 32-bit pmode) + limit (bits 16-19)
+    db 0                        ; base high
+    ; 32-bit data segment
+    dw 0xFFFF                   ; limit (bits 0-15)  0xFFFFF for full 32-bit range
+    dw 0x0                      ; base (bits 0-15)   0x0
+    db 0x0                      ; base (bits 16-23)  0x0
+    db 10010010b                ; access (present, ring 0, data segment, executable, direction 0, writable)
+    db 11001111b                ; granularity (4k pages, 32-bit pmode) + limit (bits 16-19)
+    db 0                        ; base high
+
+stage2_gdt_desc:  
+    dw $ - stage2_gdt - 1    ; limit = size of GDT
+    dd stage2_gdt               ; base
 
 section .rodata
 
