@@ -2,6 +2,8 @@ bits 16
 
 ; macros
 %define ENDL 0x0D, 0x0A
+; 0x7c00 + 0x1A4
+%define STAGE2_SIZE_LOC 0x7DA4
 
 ; flat boot sector used to load kernel kernel
 section .entry
@@ -28,7 +30,7 @@ start:
     ; just for debug try read 1 sector
     mov bx, 0x8000
     mov eax, 0x1
-    mov cx, 1
+    mov dword ecx, [STAGE2_SIZE_LOC]
     clc
     call read_sectors
     jc start.read_failed

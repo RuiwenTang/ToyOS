@@ -112,9 +112,6 @@ int main(int argc, const char **argv) {
     res = f_close(&fil);
   }
 
-  auto *test_p = reinterpret_cast<int *>(g_floppy->disk.data() + 512);
-  *test_p = 0xaafcfdab;
-
   std::cout << "stage2 file: " << argv[2] << std::endl;
 
   {
@@ -128,6 +125,12 @@ int main(int argc, const char **argv) {
 
     std::memcpy(g_floppy->disk.data() + 512, stage2_bin.data(),
                 stage2_bin.size());
+
+    int stage2_size = stage2_bin.size();
+    int stage2_sector_count = 1 + stage2_size / 512;
+
+    auto *size_p = reinterpret_cast<int *>(g_floppy->disk.data() + 0x1A4);
+    *size_p = stage2_sector_count;
   }
 
   if (res == FR_OK) {
