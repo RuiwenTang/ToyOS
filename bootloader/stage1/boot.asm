@@ -88,7 +88,7 @@ read_sectors:
     mov si, read_param
     mov byte [si], 0x10
     mov byte [si + 1], 0
-    mov word [si + 2], ax
+    mov word [si + 2], cx
     mov word [si + 4], bx
     mov word [si + 6], es
     mov dword [si + 8], eax

@@ -18,6 +18,32 @@ global entry
 entry:
     mov byte [boot_disk_driver], dl ;save boot driver
 
+
+    ; one more thing before jump into protect mode
+    ; enable graphic mode
+    mov ax, 0x4F02          ; set VBE mode
+    mov bx, 0x4118          ; VBE mode number; notice that bits 0-13 contain the mode number and bit 14 (LFB) is set and bit 15 (DM) is clear.
+    int 0x10
+    cmp ax, 0x004F
+    jne entry.graphic_failed
+    mov si, msg_graphic_enabled
+    call print
+    ; get current vbe mode
+    mov ax, 0x4F03
+    int 0x10
+    cmp ax, 0x004F
+    jne entry.query_vbe_mode_failed
+    ; now vbe index is in BX
+    ; get display info
+    mov ax, 0x4F01
+    mov cx, bx,
+    ; ES:DI point to 0x10000
+    mov di, vbe_info
+    int 0x10
+    cmp ax, 0x004F
+    jne entry.query_vbe_info_failed
+
+
     ; setup stack
     mov sp, 0xFFFF
 
@@ -33,7 +59,22 @@ entry:
 
     ; 5 - far jump into protected mode
     jmp dword 0x08:pmode
-    
+
+.graphic_failed:
+    mov si, msg_graphic_failed
+    call print
+    jmp entry.done
+
+.query_vbe_mode_failed:
+    mov si, msg_query_vbe_mode_failed
+    call print
+    jmp entry.done
+
+.query_vbe_info_failed:
+    mov si, msg_query_vbe_info_failed
+    call print
+    jmp entry.done
+
 .done:
     jmp $
 
@@ -155,7 +196,7 @@ print:
     jz print.done
 
     mov ah, 0x0E
-    mov bl, 0x04
+    mov bl, 0x0F
     mov bh, 0
     int 0x10
     jmp .loop
@@ -207,12 +248,23 @@ stage2_gdt_desc:
     dw $ - stage2_gdt - 1    ; limit = size of GDT
     dd stage2_gdt               ; base
 
+vbe_info:
+    resb 256
+
 section .rodata
 
 msg_a20_enabled:
     db "A20 is enabled!", ENDL, 0
 msg_a20_failed:
     db "A20 enable failed!", ENDL, 0
+msg_graphic_failed:
+    db "Failed enable graphic mode!", ENDL, 0
+msg_graphic_enabled:
+    db "Graphic mode is enabled!", ENDL, 0
+msg_query_vbe_mode_failed:
+    db "Failed Query VBE Mode!", ENDL, 0
+msg_query_vbe_info_failed:
+    db "Failed Query VBE Info!", ENDL, 0
 
 section .text
 pmode:
@@ -224,9 +276,8 @@ pmode:
     mov es, ax
     mov gs, ax
     mov fs, ax
-    mov eax, 1
-    push eax
-    mov eax, 2
+    
+    mov eax, vbe_info
     push eax
     call stage2_main
     jmp $
