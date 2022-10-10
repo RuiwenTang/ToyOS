@@ -95,10 +95,6 @@ void stage2_main(void *info) {
   struct vbe_mode_info_structure *vbe_info =
       (struct vbe_mode_info_structure *)info;
 
-  int *p = (int *)0x9000;
-
-  *p = vbe_info->bpp;
-
   g_fb = (uint8 *)vbe_info->framebuffer;
   g_width = vbe_info->width;
   g_height = vbe_info->height;
@@ -113,7 +109,7 @@ void stage2_main(void *info) {
   char msg[] = "Print In Protect Mode";
 
   int i = 0;
-  for (i; i < sizeof(msg); i++) {
+  for (i = 0; i < sizeof(msg); i++) {
     put_char(msg[i], x, y);
     x += 8;
   }
