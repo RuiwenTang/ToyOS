@@ -18,7 +18,6 @@ stage2_c_args = [
   '-ffreestanding',
   '-fno-builtin',
   '-nostdlib',
-  '-nostdinc',
 ]
 
 # external dependency
@@ -29,6 +28,9 @@ stage2_bin = executable(
     'stage2.bin',
     sources: [
         stage2_asm.process(['stage2.asm']),
+        'bios_vbe.h',
+        'screen/screen.c',
+        'screen/screen.h',
         'stage2.c',
     ],
     include_directories: [
