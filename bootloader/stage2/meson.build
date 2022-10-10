@@ -21,13 +21,20 @@ stage2_c_args = [
   '-nostdinc',
 ]
 
+# external dependency
+buildin_font_inc = subproject('font8x8').get_variable('font8x8_incdir')
+
+
 stage2_bin = executable(
     'stage2.bin',
     sources: [
         stage2_asm.process(['stage2.asm']),
         'stage2.c',
     ],
-    include_directories: [],
+    include_directories: [
+      '.',
+      buildin_font_inc
+    ],
     link_args: stage2_link_args,
     c_args: stage2_c_args,
     cpp_args: [],

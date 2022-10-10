@@ -1,0 +1,4 @@
+[wrap-git]
+directory = font8x8
+url = git@github.com:RuiwenTang/font8x8.git
+revision = master
