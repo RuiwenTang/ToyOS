@@ -32,22 +32,9 @@ entry:
     mov cr0, eax
 
     ; 5 - far jump into protected mode
-    jmp dword 0x08:entry.pmode
+    jmp dword 0x08:pmode
     
 .done:
-    jmp $
-
-.pmode:
-    ; 6 - setup segment registers
-    mov ax, 0x10
-    mov ds, ax
-    mov ss, ax
-    mov es, ax
-    mov gs, ax
-    mov fs, ax
-    push dword 0x1
-    push dword 0x2
-    call stage2_main
     jmp $
 
 enable_a20:
@@ -226,3 +213,20 @@ msg_a20_enabled:
     db "A20 is enabled!", ENDL, 0
 msg_a20_failed:
     db "A20 enable failed!", ENDL, 0
+
+section .text
+pmode:
+    [bits 32]
+    ; 6 - setup segment registers
+    mov ax, 0x10
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    mov eax, 1
+    push eax
+    mov eax, 2
+    push eax
+    call stage2_main
+    jmp $
