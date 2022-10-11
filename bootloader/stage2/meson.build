@@ -27,11 +27,12 @@ buildin_font_inc = subproject('font8x8').get_variable('font8x8_incdir')
 stage2_bin = executable(
     'stage2.bin',
     sources: [
-        stage2_asm.process(['stage2.asm']),
+        stage2_asm.process(['stage2.asm', 'x86/bios_call.asm']),
         'bios_vbe.h',
         'screen/screen.c',
         'screen/screen.h',
         'stage2.c',
+        'x86/bios.h',
     ],
     include_directories: [
       '.',
