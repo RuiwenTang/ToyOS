@@ -29,6 +29,10 @@ stage2_bin = executable(
     sources: [
         stage2_asm.process(['stage2.asm', 'x86/bios_call.asm']),
         'bios_vbe.h',
+        'disk/fat.c',
+        'disk/fat.h',
+        'disk/mbr.c',
+        'disk/mbr.h',
         'screen/screen.c',
         'screen/screen.h',
         'stage2.c',
