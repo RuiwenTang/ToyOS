@@ -87,6 +87,10 @@ void screen_print(char *str, uint32_t len, uint32_t color) {
       continue;
     }
 
+    if (str[i] == 0) {
+      continue;
+    }
+
     screen_put_char(str[i], color, curr_x, curr_y);
     curr_x += 8;
     if (curr_x > g_screen_info.width) {
