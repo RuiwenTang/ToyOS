@@ -293,6 +293,11 @@ pmode:
     mov gs, ax
     mov fs, ax
     
+    
+    xor eax, eax
+    mov al, [boot_disk_driver]
+    push ax
+
     mov eax, vbe_info
     push eax
     call stage2_main
