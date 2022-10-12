@@ -12,6 +12,7 @@ stage2_asm = generator(nasm,
 stage2_link_args = [
   '-nostdlib',
   '-T', meson.current_source_dir() + '/linker.ld',
+  '-lgcc',
 ]
 
 stage2_c_args = [
@@ -33,6 +34,8 @@ stage2_bin = executable(
         'disk/fat.h',
         'disk/mbr.c',
         'disk/mbr.h',
+        'printf.c',
+        'printf.h',
         'screen/screen.c',
         'screen/screen.h',
         'stage2.c',
