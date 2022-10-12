@@ -1,10 +1,17 @@
 #include "disk/fat.h"
 #include "disk/mbr.h"
 #include "printf.h"
+#include "screen/screen.h"
 #include "x86/bios.h"
 #include <stdbool.h>
 
 #define MEM_DIR_BASE 0x70000
+
+static void _memcpy(uint8_t *dst, uint8_t *str, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+    dst[i] = str[i];
+  }
+}
 
 struct FAT_INFO {
   enum FAT_TYPE fat_type;
@@ -42,7 +49,7 @@ int fat_init(uint16_t boot_drive) {
     return 1;
   }
 
-  if (bios_disk_read(boot_drive, disk_lba_start, (uint32_t)fat_root)) {
+  if (bios_disk_read(boot_drive, disk_lba_start, (void *)fat_root)) {
     return 1;
   }
 
@@ -95,8 +102,18 @@ int fat_init(uint16_t boot_drive) {
   if (bios_disk_read(g_fat_info.drive_num,
                      disk_lba_start + g_fat_info.first_data_sector -
                          g_fat_info.root_dir_sectors,
-                     (uint32_t)MEM_DIR_BASE)) {
+                     (void *)read_buf)) {
     return 1;
+  }
+
+  _memcpy((uint8_t *)MEM_DIR_BASE, read_buf, 512);
+
+  struct DIR_ENTRY *p_dir = (struct DIR_ENTRY *)MEM_DIR_BASE;
+
+  if (p_dir->name[0]) {
+    screen_print(p_dir->name, 11, SCREEN_COLOR_RED);
+
+    printf(" | file attr = %x", (uint32_t)p_dir->attribute);
   }
 
   return 0;
