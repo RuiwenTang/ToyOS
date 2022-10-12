@@ -61,6 +61,13 @@ enum FAT_ATTR {
                  FAT_ATTR_VOLUME_ID
 };
 
+enum FAT_TYPE {
+  FAT_FAT12 = 1,
+  FAT_FAT16,
+  FAT_FAT32,
+  FAT_EXFAT,
+};
+
 struct __attribute__((packed)) DIR_ENTRY {
   uint8_t name[11];    // 8.3 name,
   uint8_t attribute;   // READ_ONLY=0x01 HIDDEN=0x02 SYSTEM=0x04 VOLUME_ID=0x08

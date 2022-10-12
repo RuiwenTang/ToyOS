@@ -110,6 +110,14 @@ int main(int argc, const char **argv) {
     res = f_write(&fil, "It works!\r\n", 11, &bw);
 
     res = f_close(&fil);
+
+    res = f_mkdir("boot");
+
+    res = f_open(&fil, "boot/kernel.sys", FA_WRITE | FA_CREATE_ALWAYS);
+
+    res = f_write(&fil, "Hello world!", 12, &bw);
+
+    res = f_close(&fil);
   }
 
   std::cout << "stage2 file: " << argv[2] << std::endl;
