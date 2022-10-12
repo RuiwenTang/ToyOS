@@ -4,6 +4,8 @@
 #include "x86/bios.h"
 #include <stdbool.h>
 
+#define MEM_DIR_BASE 0x70000
+
 struct FAT_INFO {
   enum FAT_TYPE fat_type;
   uint16_t drive_num;
@@ -40,7 +42,7 @@ int fat_init(uint16_t boot_drive) {
     return 1;
   }
 
-  if (bios_disk_read(boot_drive, disk_lba_start, fat_root)) {
+  if (bios_disk_read(boot_drive, disk_lba_start, (uint32_t)fat_root)) {
     return 1;
   }
 
@@ -88,7 +90,14 @@ int fat_init(uint16_t boot_drive) {
 
   fat_dump();
 
-  // bios_disk_read(g_fat_info.drive_num, g_fat_info.first_fat_sector, )
+  // try read first
+
+  if (bios_disk_read(g_fat_info.drive_num,
+                     disk_lba_start + g_fat_info.first_data_sector -
+                         g_fat_info.root_dir_sectors,
+                     (uint32_t)MEM_DIR_BASE)) {
+    return 1;
+  }
 
   return 0;
 }
