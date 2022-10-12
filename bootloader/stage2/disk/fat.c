@@ -102,11 +102,9 @@ int fat_init(uint16_t boot_drive) {
   if (bios_disk_read(g_fat_info.drive_num,
                      disk_lba_start + g_fat_info.first_data_sector -
                          g_fat_info.root_dir_sectors,
-                     (void *)read_buf)) {
+                     (void *)MEM_DIR_BASE)) {
     return 1;
   }
-
-  _memcpy((uint8_t *)MEM_DIR_BASE, read_buf, 512);
 
   struct DIR_ENTRY *p_dir = (struct DIR_ENTRY *)MEM_DIR_BASE;
 

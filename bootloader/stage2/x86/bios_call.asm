@@ -61,6 +61,7 @@ bios_disk_read:
 [bits 16]
     ;save regs
     push ebx
+    push ecx
     push si
 
     mov si, read_param
@@ -69,11 +70,15 @@ bios_disk_read:
     mov eax, [bp + 12]      ; lba address
     mov ebx,  [bp + 16]
 
+    mov ecx, ebx
+    and ebx, 0x0f
+    shr ecx, 4
+
     mov byte [si], 0x10     ; fixed value
     mov byte [si + 1], 0    ; fixed value
     mov word [si + 2], 1    ; only read one sector
     mov word [si + 4], bx   ; addr
-    mov word [si + 6], 0    ; addr segment
+    mov word [si + 6], cx    ; addr segment
     mov dword [si + 8], eax ; lba address
     mov dword [si + 12], 0  ; only 32bit lba address for now
 
@@ -94,6 +99,7 @@ bios_disk_read:
 
 .save_return:
     pop si
+    pop ecx
     pop ebx
 
     push eax
