@@ -31,7 +31,8 @@ struct __attribute__((packed)) BPB {
   uint8_t oem_name[8];         // ignored
   uint16_t bytes_per_sector;   //
   uint8_t sectors_per_cluster; //
-  uint16_t reserved_sectors;   //
+  uint16_t reserved_sectors;   // Number of reserved sectors. The boot record
+                               // sectors are included in this value.
   uint8_t fat_count;           // should be 2
   uint16_t dir_entry_count;    // number of root entry
   uint16_t total_sectors;      // 0 means large lba
