@@ -15,5 +15,13 @@ void stage2_main(void *info, uint16_t boot_drive) {
     return;
   }
 
+  printf("\n begin load kernel file:\n");
+  struct FAT_FILE *file = fat_kernel_file();
+
+  if (!file) {
+    printf("No kernel file !!\n");
+    return;
+  }
+
   return;
 }

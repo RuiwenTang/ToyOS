@@ -4,6 +4,7 @@
 #include "screen/screen.h"
 #include "x86/bios.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 #define MEM_DIR_BASE 0x70000
 
@@ -11,6 +12,16 @@ static void _memcpy(uint8_t *dst, uint8_t *str, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     dst[i] = str[i];
   }
+}
+
+static bool _memcmp(uint8_t *s1, uint8_t *s2, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+    if (s1[i] != s2[i]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 struct FAT_INFO {
@@ -25,6 +36,10 @@ struct FAT_INFO {
   uint32_t total_clusters;
 };
 
+struct FAT_FILE {
+  struct DIR_ENTRY fat_entry;
+};
+
 uint8_t fat_root[512];
 
 uint8_t read_buf[512];
@@ -36,6 +51,9 @@ struct FAT_INFO g_fat_info;
 
 struct BPB *fat_bpb = 0;
 
+struct DIR_ENTRY *g_root_dir = (struct DIR_ENTRY *)MEM_DIR_BASE;
+
+// private function
 void fat_dump();
 
 int fat_init(uint16_t boot_drive) {
@@ -98,7 +116,7 @@ int fat_init(uint16_t boot_drive) {
   fat_dump();
 
   // try read first
-
+  // basic the first directory contains the kernel file
   if (bios_disk_read(g_fat_info.drive_num,
                      disk_lba_start + g_fat_info.first_data_sector -
                          g_fat_info.root_dir_sectors,
@@ -106,12 +124,8 @@ int fat_init(uint16_t boot_drive) {
     return 1;
   }
 
-  struct DIR_ENTRY *p_dir = (struct DIR_ENTRY *)MEM_DIR_BASE;
-
-  if (p_dir->name[0]) {
-    screen_print(p_dir->name, 11, SCREEN_COLOR_RED);
-
-    printf(" | file attr = %x", (uint32_t)p_dir->attribute);
+  if (!g_root_dir->name[0]) {
+    return 1;
   }
 
   return 0;
@@ -146,4 +160,88 @@ void fat_dump() {
 
   printf("first fat sector: %d | first data sector: %d",
          g_fat_info.first_fat_sector, g_fat_info.first_data_sector);
+}
+
+uint32_t first_sector(uint32_t cluster) {
+  return (cluster - 2) * fat_bpb->sectors_per_cluster +
+         g_fat_info.first_data_sector + disk_lba_start;
+}
+
+// TODO support LFN entry
+
+struct DIR_ENTRY *boot_dir = NULL;
+
+struct FAT_FILE kernel_file;
+
+struct FAT_FILE *fat_kernel_file() {
+
+  for (uint32_t i = 0; i < g_fat_info.root_dir_sectors; i++) {
+    struct DIR_ENTRY *p_dir = g_root_dir + i * 512;
+
+    for (uint32_t j = 0; j < 512 / 32; j++) {
+      if (_memcmp(p_dir[j].name, "BOOT       ", 11)) {
+        // found boot dir
+        boot_dir = p_dir + j;
+        break;
+      }
+    }
+
+    if (boot_dir) {
+      break;
+    }
+  }
+
+  if (!boot_dir || ((boot_dir->attribute & FAT_ATTR_DIRECTORY) == 0)) {
+    return NULL;
+  }
+
+  uint32_t cluster =
+      boot_dir->first_cluster_high << 8 | boot_dir->first_cluster_low;
+  uint32_t start_sector = first_sector(cluster);
+  printf("BOOT dir found, start cluster = %d at sector %d \n", cluster,
+         start_sector);
+
+  if (bios_disk_read(g_fat_info.drive_num, start_sector, read_buf)) {
+    // read dir content failed
+    return NULL;
+  }
+
+  struct DIR_ENTRY *boot_content = (struct DIR_ENTRY *)read_buf;
+
+  bool found_kernel = false;
+
+  // find KERNEL  SYS
+  for (uint32_t j = 0; j < 512 / 32; j++) {
+    if (_memcmp(boot_content[j].name, "KERNEL  SYS", 11)) {
+      // find kernel file
+
+      found_kernel = true;
+
+      kernel_file.fat_entry.attribute = boot_content[j].attribute;
+      kernel_file.fat_entry.create_time = boot_content[j].create_time;
+      kernel_file.fat_entry.create_data = boot_content[j].create_data;
+      kernel_file.fat_entry.access_time = boot_content[j].access_time;
+      kernel_file.fat_entry.first_cluster_high =
+          boot_content[j].first_cluster_high;
+      kernel_file.fat_entry.modified_time = boot_content[j].modified_time;
+      kernel_file.fat_entry.modified_data = boot_content[j].modified_data;
+      kernel_file.fat_entry.first_cluster_low =
+          boot_content[j].first_cluster_low;
+      kernel_file.fat_entry.size = boot_content[j].size;
+
+      break;
+    }
+  }
+
+  if (!found_kernel) {
+    return NULL;
+  }
+
+  uint32_t kernel_cluster = kernel_file.fat_entry.first_cluster_high << 8 |
+                            kernel_file.fat_entry.first_cluster_low;
+
+  printf("kernel file found: first cluster = %d | file size: %d bytes\n",
+         kernel_cluster, kernel_file.fat_entry.size);
+
+  return &kernel_file;
 }

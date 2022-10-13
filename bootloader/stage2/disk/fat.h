@@ -101,6 +101,14 @@ struct __attribute__((packed)) DIR_LFN_ENTRY {
   uint16_t chars3[2];
 };
 
+struct FAT_FILE;
+
 int fat_init(uint16_t boot_drive);
+
+// hard code kernel file location and file name
+// boot/kernel.sys
+// BOOT
+// KERNEL  SYS
+struct FAT_FILE *fat_kernel_file();
 
 #endif // BOOT_DISK_FAT_H
