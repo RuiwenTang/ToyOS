@@ -110,14 +110,6 @@ int main(int argc, const char **argv) {
     res = f_write(&fil, "It works!\r\n", 11, &bw);
 
     res = f_close(&fil);
-
-    res = f_mkdir("boot");
-
-    res = f_open(&fil, "boot/kernel.sys", FA_WRITE | FA_CREATE_ALWAYS);
-
-    res = f_write(&fil, "Hello world!", 12, &bw);
-
-    res = f_close(&fil);
   }
 
   std::cout << "stage2 file: " << argv[2] << std::endl;
@@ -141,6 +133,25 @@ int main(int argc, const char **argv) {
     *size_p = stage2_sector_count;
   }
 
+  std::cout << "kernel file:" << argv[3] << std::endl;
+  {
+    std::ifstream kernel_stream(argv[3], std::ios::in | std::ios::binary);
+    std::vector<BYTE> kernel_bin{
+        (std::istreambuf_iterator<char>(kernel_stream)),
+        std::istreambuf_iterator<char>()};
+
+    std::cout << "size of kernel file: " << kernel_bin.size() << std::endl;
+
+    res = f_mkdir("boot");
+
+    res = f_open(&fil, "boot/kernel.sys", FA_WRITE | FA_CREATE_ALWAYS);
+
+    res = f_write(&fil, (const void *)kernel_bin.data(),
+                  (UINT)kernel_bin.size(), &bw);
+
+    res = f_close(&fil);
+  }
+
   if (res == FR_OK) {
     std::ofstream out_fs(argv[1], std::ios::out | std::ios::binary);
 
@@ -156,5 +167,5 @@ int main(int argc, const char **argv) {
   std::cout << "start lba: " << p_pte->lba_start << std::endl;
   std::cout << "count sector: " << p_pte->n_sec << std::endl;
 
-  return 0;
+  return res;
 }

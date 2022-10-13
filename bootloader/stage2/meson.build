@@ -1,13 +1,4 @@
 
-stage2_asm = generator(nasm,
-  output : '@BASENAME@.o',
-  arguments : [
-    '-f', 'elf32',
-    '-i', meson.current_source_dir() + '/',
-    '-i', join_paths(meson.current_source_dir(), ''),
-    '@INPUT@',
-    '-o', '@OUTPUT@'])
-
 
 stage2_link_args = [
   '-nostdlib',
@@ -28,8 +19,7 @@ buildin_font_inc = subproject('font8x8').get_variable('font8x8_incdir')
 stage2_bin = executable(
     'stage2.bin',
     sources: [
-        stage2_asm.process(['stage2.asm', 'x86/bios_call.asm']),
-        'bios_vbe.h',
+        nasm_c.process(['stage2.asm', 'x86/bios_call.asm']),
         'disk/fat.c',
         'disk/fat.h',
         'disk/mbr.c',
@@ -40,6 +30,7 @@ stage2_bin = executable(
         'screen/screen.h',
         'stage2.c',
         'x86/bios.h',
+        'x86/vbe.h',
     ],
     include_directories: [
       '.',

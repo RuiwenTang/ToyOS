@@ -24,7 +24,7 @@ mk_floppy = executable(
 disk_img = custom_target(
   'gen_disk',
   output: 'disk.img',
-  input: ['gen_floppy.py', mk_floppy, stage1_boot, stage2_bin],
+  input: ['gen_floppy.py', mk_floppy, stage1_boot, stage2_bin, kernel_sys],
   command: [
     prog_python, '@INPUT@', '@OUTPUT@',
   ],
