@@ -1,7 +1,7 @@
 #ifndef BOOT_SCREEN_H
 #define BOOT_SCREEN_H
 
-#include "bios_vbe.h"
+#include "x86/vbe.h"
 
 #define SCREEN_COLOR_WHITE 0xffffff
 #define SCREEN_COLOR_RED 0xff0000
