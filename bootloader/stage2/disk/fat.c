@@ -44,6 +44,9 @@ uint8_t fat_root[512];
 
 uint8_t read_buf[512];
 
+uint8_t g_fat_tab[512];
+uint32_t g_fat_tab_index = 0;
+
 uint32_t disk_lba_start;
 uint32_t disk_lba_count;
 
@@ -55,6 +58,10 @@ struct DIR_ENTRY *g_root_dir = (struct DIR_ENTRY *)MEM_DIR_BASE;
 
 // private function
 void fat_dump();
+
+uint16_t read_fat_table(uint32_t cluster);
+
+uint32_t total_cluster(uint32_t fist_cluster);
 
 int fat_init(uint16_t boot_drive) {
   struct PTE *pte = mbr_read_pte();
@@ -111,6 +118,13 @@ int fat_init(uint16_t boot_drive) {
     g_fat_info.fat_type = FAT_FAT16;
   } else {
     g_fat_info.fat_type = FAT_FAT32;
+  }
+
+  // read first fat sector into fat table
+
+  if (bios_disk_read(g_fat_info.drive_num,
+                     disk_lba_start + g_fat_info.first_fat_sector, g_fat_tab)) {
+    return 1;
   }
 
   fat_dump();
@@ -243,5 +257,43 @@ struct FAT_FILE *fat_kernel_file() {
   printf("kernel file found: first cluster = %d | file size: %d bytes\n",
          kernel_cluster, kernel_file.fat_entry.size);
 
+  uint32_t cluster_count = total_cluster(kernel_cluster);
+
+  printf("total kernel cluster is %d", cluster_count);
+
   return &kernel_file;
+}
+
+uint16_t read_fat_table(uint32_t cluster) {
+  uint32_t fat_offset = cluster * 2;
+
+  if (fat_offset / 512 > g_fat_tab_index) {
+    // need to read next fat
+    printf("need read next fat table\n");
+  }
+
+  uint32_t fat_sector = g_fat_info.first_fat_sector + (fat_offset / 512);
+  uint32_t ent_offset = fat_offset % 512;
+
+  uint16_t table_value = *(uint16_t *)&g_fat_tab[ent_offset];
+
+  return table_value;
+}
+
+uint32_t total_cluster(uint32_t fist_cluster) {
+  uint32_t size = 1;
+
+  uint16_t value = read_fat_table(fist_cluster);
+
+  while (value < 0xFFF8) {
+    if (value == 0xFFF7) {
+      // bad sector and kernel is broken
+      return 0;
+    }
+
+    size++;
+    value = read_fat_table((uint32_t)value);
+  }
+
+  return size;
 }

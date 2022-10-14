@@ -24,6 +24,7 @@ stage2_bin = executable(
         'disk/fat.h',
         'disk/mbr.c',
         'disk/mbr.h',
+        'elf.h',
         'printf.c',
         'printf.h',
         'screen/screen.c',
