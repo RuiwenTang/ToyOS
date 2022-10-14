@@ -1,4 +1,4 @@
-project('FloopyOS' , 'c', 'cpp')
+project('ToyOS' , 'c', 'cpp')
 
 nasm = find_program('nasm', required: true)
 
