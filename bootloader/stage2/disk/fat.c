@@ -8,12 +8,6 @@
 
 #define MEM_DIR_BASE 0x70000
 
-static void _memcpy(uint8_t *dst, uint8_t *str, uint32_t len) {
-  for (uint32_t i = 0; i < len; i++) {
-    dst[i] = str[i];
-  }
-}
-
 static bool _memcmp(uint8_t *s1, uint8_t *s2, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     if (s1[i] != s2[i]) {
@@ -38,6 +32,9 @@ struct FAT_INFO {
 
 struct FAT_FILE {
   struct DIR_ENTRY fat_entry;
+  // FIXME cluster is 2 sector
+  uint32_t fist_cluster;
+  uint32_t total_cluster;
 };
 
 uint8_t fat_root[512];
@@ -259,7 +256,15 @@ struct FAT_FILE *fat_kernel_file() {
 
   uint32_t cluster_count = total_cluster(kernel_cluster);
 
-  printf("total kernel cluster is %d", cluster_count);
+  printf("total kernel cluster is %d \n", cluster_count);
+
+  if (kernel_file.fat_entry.size > 0x60000) {
+    printf("kernel file is too large!!\n");
+    return NULL;
+  }
+
+  kernel_file.fist_cluster = kernel_cluster;
+  kernel_file.total_cluster = cluster_count;
 
   return &kernel_file;
 }
@@ -296,4 +301,39 @@ uint32_t total_cluster(uint32_t fist_cluster) {
   }
 
   return size;
+}
+
+int fat_load_file(struct FAT_FILE *file, uint32_t addr) {
+
+  uint32_t curr = addr;
+
+  uint32_t curr_cluster = file->fist_cluster;
+  uint32_t i_cluster = 1;
+
+  do {
+    uint32_t f_sector = first_sector(curr_cluster);
+
+    for (int i = 0; i < fat_bpb->sectors_per_cluster; i++) {
+      if (bios_disk_read(g_fat_info.drive_num, f_sector + i, (void *)curr)) {
+        return 1;
+      }
+      curr += 512;
+    }
+
+    uint16_t value = read_fat_table(curr_cluster);
+
+    if (value == 0xFFF8) {
+      // end cluster
+      break;
+    }
+    if (value == 0xFFF7) {
+      // bad sector
+      return 1;
+    }
+
+    curr_cluster = (uint32_t)value;
+    i_cluster++;
+  } while (i_cluster < file->total_cluster);
+
+  return 0;
 }

@@ -1,7 +1,12 @@
 
 #include "disk/fat.h"
+#include "elf.h"
 #include "printf.h"
 #include "screen/screen.h"
+
+#define KERNEL_FILE_ADDR 0x10000
+
+typedef void (*KernelStart)();
 
 void stage2_main(void *info, uint16_t boot_drive) {
 
@@ -23,6 +28,24 @@ void stage2_main(void *info, uint16_t boot_drive) {
     printf("No kernel file !!\n");
     return;
   }
+
+  if (fat_load_file(file, (uint32_t)KERNEL_FILE_ADDR)) {
+    printf("Failed load kernel into memory!!");
+    return;
+  }
+
+  uint32_t kernel_entry = elf_load((void *)KERNEL_FILE_ADDR);
+
+  if (kernel_entry == 0) {
+    printf("Failed load kernel elf file!!\n");
+    return;
+  }
+
+  printf("kernel entry at: %x\n", kernel_entry);
+
+  KernelStart entry = (KernelStart)kernel_entry;
+
+  entry();
 
   return;
 }

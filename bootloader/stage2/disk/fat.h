@@ -111,4 +111,6 @@ int fat_init(uint16_t boot_drive);
 // KERNEL  SYS
 struct FAT_FILE *fat_kernel_file();
 
+int fat_load_file(struct FAT_FILE *file, uint32_t addr);
+
 #endif // BOOT_DISK_FAT_H

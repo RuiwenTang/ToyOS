@@ -1,6 +1,7 @@
 #ifndef BOOT_ELF_H
 #define BOOT_ELF_H
 
+#include "disk/fat.h"
 #include <stdint.h>
 
 // reference https://wiki.osdev.org/ELF_Tutorial
@@ -50,5 +51,75 @@ enum Elf_Ident {
 
 #define ELFDATA2LSB (1) // Little Endian
 #define ELFCLASS32 (1)  // 32-bit Architecture
+
+enum Elf_Type {
+  ET_NONE = 0, // Unkown Type
+  ET_REL = 1,  // Relocatable File
+  ET_EXEC = 2  // Executable File
+};
+
+#define EM_386 (3)     // x86 Machine Type
+#define EV_CURRENT (1) // ELF Current Version
+
+typedef struct {
+  Elf32_Word sh_name;
+  Elf32_Word sh_type;
+  Elf32_Word sh_flags;
+  Elf32_Addr sh_addr;
+  Elf32_Off sh_offset;
+  Elf32_Word sh_size;
+  Elf32_Word sh_link;
+  Elf32_Word sh_info;
+  Elf32_Word sh_addralign;
+  Elf32_Word sh_entsize;
+} Elf32_Shdr;
+
+#define SHN_UNDEF (0x00) // Undefined/Not present
+
+enum ShT_Types {
+  SHT_NULL = 0,     // Null section
+  SHT_PROGBITS = 1, // Program information
+  SHT_SYMTAB = 2,   // Symbol table
+  SHT_STRTAB = 3,   // String table
+  SHT_RELA = 4,     // Relocation (w/ addend)
+  SHT_NOBITS = 8,   // Not present in file
+  SHT_REL = 9,      // Relocation (no addend)
+};
+
+enum ShT_Attributes {
+  SHF_WRITE = 0x01, // Writable section
+  SHF_ALLOC = 0x02  // Exists in memory
+};
+
+typedef struct {
+  Elf32_Word st_name;
+  Elf32_Addr st_value;
+  Elf32_Word st_size;
+  uint8_t st_info;
+  uint8_t st_other;
+  Elf32_Half st_shndx;
+} Elf32_Sym;
+
+typedef struct {
+  Elf32_Word p_type;
+  Elf32_Off p_offset;
+  Elf32_Addr p_vaddr;
+  Elf32_Addr p_paddr;
+  Elf32_Word p_filesz;
+  Elf32_Word p_memsz;
+  Elf32_Word p_flags;
+  Elf32_Word p_align;
+} Elf32_Phdr;
+
+enum PhT_Type {
+  NULL = 0,    // ignore
+  LOAD = 1,    // load into memory
+  DYNAMIC = 2, // dynamic link
+  INTERP = 3,  // contains a file path to an executable to use as an interpreter
+               // for the following segment
+  NOTE = 4,    // note section
+};
+
+uint32_t elf_load(void *file);
 
 #endif // BOOT_ELF_H
