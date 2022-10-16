@@ -1,5 +1,6 @@
 
 #include "screen/screen.h"
+
 #include "font8x8_basic.h"
 
 struct ScreenInfo {
@@ -7,7 +8,7 @@ struct ScreenInfo {
   uint16_t width;
   uint16_t height;
   uint16_t pitch;
-  uint8_t *framebuffer; // addr of framebuffer address
+  uint8_t *framebuffer;  // addr of framebuffer address
 
   // logical position for text render
   uint16_t x;
@@ -62,7 +63,6 @@ void screen_put_pixel(uint32_t color, uint16_t x, uint16_t y) {
 }
 
 void screen_put_char(char c, uint32_t color, uint16_t x, uint16_t y) {
-
   uint8_t *bitmap = (uint8_t *)font8x8_basic[c];
 
   for (int i = 0; i < 8; i++) {
@@ -80,7 +80,6 @@ void screen_print(char *str, uint32_t len, uint32_t color) {
   uint16_t curr_y = g_screen_info.y;
 
   for (uint32_t i = 0; i < len; i++) {
-
     if (str[i] == '\n') {
       curr_x = 0;
       curr_y += 10;

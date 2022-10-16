@@ -32,5 +32,6 @@ kernel_sys = executable(
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
     cpp_args: kernel_cpp_args,
+    dependencies: [toy_boot],
 )
 

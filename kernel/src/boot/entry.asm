@@ -12,7 +12,9 @@ section .text
 global start
 extern kernel_main
 start:
+  mov ebx, [esp + 4]
   mov esp, stack_top
+  push ebx
   call kernel_main
 
   cli

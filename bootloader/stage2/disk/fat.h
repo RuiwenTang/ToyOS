@@ -27,20 +27,20 @@ struct __attribute__((packed)) FAT32_EXTBR {
 
 // BIOS Parameter Block
 struct __attribute__((packed)) BPB {
-  uint8_t boot_jump[3];        // ignored
-  uint8_t oem_name[8];         // ignored
-  uint16_t bytes_per_sector;   //
-  uint8_t sectors_per_cluster; //
-  uint16_t reserved_sectors;   // Number of reserved sectors. The boot record
-                               // sectors are included in this value.
-  uint8_t fat_count;           // should be 2
-  uint16_t dir_entry_count;    // number of root entry
-  uint16_t total_sectors;      // 0 means large lba
-  uint8_t media_type;          // ignored
-  uint16_t sector_per_fat;     // FAT12/FAT16 only, ignored
-  uint16_t sector_per_track;   //
-  uint16_t heads;              //
-  uint32_t hidden_sectors;     // LBA of begining of the partion
+  uint8_t boot_jump[3];         // ignored
+  uint8_t oem_name[8];          // ignored
+  uint16_t bytes_per_sector;    //
+  uint8_t sectors_per_cluster;  //
+  uint16_t reserved_sectors;    // Number of reserved sectors. The boot record
+                                // sectors are included in this value.
+  uint8_t fat_count;            // should be 2
+  uint16_t dir_entry_count;     // number of root entry
+  uint16_t total_sectors;       // 0 means large lba
+  uint8_t media_type;           // ignored
+  uint16_t sector_per_fat;      // FAT12/FAT16 only, ignored
+  uint16_t sector_per_track;    //
+  uint16_t heads;               //
+  uint32_t hidden_sectors;      // LBA of begining of the partion
   uint32_t large_sector_count;
   union {
     struct EXTBR ebr_16;
@@ -69,32 +69,32 @@ enum FAT_TYPE {
 };
 
 struct __attribute__((packed)) DIR_ENTRY {
-  uint8_t name[11];    // 8.3 name,
-  uint8_t attribute;   // READ_ONLY=0x01 HIDDEN=0x02 SYSTEM=0x04 VOLUME_ID=0x08
-                       // DIRECTORY=0x10 ARCHIVE=0x20
-                       // LFN=READ_ONLY|HIDDEN|SYSTEM|VOLUME_ID (means long file
-                       // name entry)
-  uint8_t reserved;    // ignored
-  uint8_t time_tenths; // ignored
-  uint16_t create_time; // Hour    5 bits
-                        // Minutes 6 bits
-                        // seconds 5 bits
-  uint16_t create_data; // year  7 bits
-                        // month 4 bits
-                        // day   5 bits
-  uint16_t access_time; // same as data
+  uint8_t name[11];   // 8.3 name,
+  uint8_t attribute;  // READ_ONLY=0x01 HIDDEN=0x02 SYSTEM=0x04 VOLUME_ID=0x08
+                      // DIRECTORY=0x10 ARCHIVE=0x20
+                      // LFN=READ_ONLY|HIDDEN|SYSTEM|VOLUME_ID (means long file
+                      // name entry)
+  uint8_t reserved;   // ignored
+  uint8_t time_tenths;   // ignored
+  uint16_t create_time;  // Hour    5 bits
+                         // Minutes 6 bits
+                         // seconds 5 bits
+  uint16_t create_data;  // year  7 bits
+                         // month 4 bits
+                         // day   5 bits
+  uint16_t access_time;  // same as data
   uint16_t first_cluster_high;
   uint16_t modified_time;
   uint16_t modified_data;
   uint16_t first_cluster_low;
-  uint32_t size; // size in bytes
+  uint32_t size;  // size in bytes
 };
 
 struct __attribute__((packed)) DIR_LFN_ENTRY {
   uint8_t order;
-  int16_t chars1[5];       // first 5 charaters (2 bytes char)
-  uint8_t attributes;      // always equal 0x0F
-  uint8_t long_entry_type; // 0 means name entry
+  int16_t chars1[5];        // first 5 charaters (2 bytes char)
+  uint8_t attributes;       // always equal 0x0F
+  uint8_t long_entry_type;  // 0 means name entry
   uint8_t check_sum;
   uint16_t chars2[6];
   uint16_t always_zero;
@@ -113,4 +113,4 @@ struct FAT_FILE *fat_kernel_file();
 
 int fat_load_file(struct FAT_FILE *file, uint32_t addr);
 
-#endif // BOOT_DISK_FAT_H
+#endif  // BOOT_DISK_FAT_H

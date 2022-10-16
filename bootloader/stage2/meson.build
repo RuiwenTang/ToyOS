@@ -41,4 +41,5 @@ stage2_bin = executable(
     link_args: stage2_link_args,
     c_args: stage2_c_args,
     cpp_args: [],
+    dependencies: [toy_boot],
 )

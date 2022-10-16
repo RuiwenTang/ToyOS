@@ -5,4 +5,4 @@
 // https://github.com/limine-bootloader/limine/blob/trunk/common/lib/print.s2.c
 void printf(const char *, ...);
 
-#endif // BOOT_PRINT_F
+#endif  // BOOT_PRINT_F

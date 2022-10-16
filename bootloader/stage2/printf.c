@@ -1,8 +1,10 @@
 #include "printf.h"
-#include "screen/screen.h"
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "screen/screen.h"
 
 #define PRINT_BUF_MAX 512
 
@@ -31,8 +33,7 @@ static void prn_str(char *print_buf, size_t *print_buf_i, const char *string) {
   size_t i;
 
   for (i = 0; string[i]; i++) {
-    if (*print_buf_i == (PRINT_BUF_MAX - 1))
-      break;
+    if (*print_buf_i == (PRINT_BUF_MAX - 1)) break;
     print_buf[(*print_buf_i)++] = string[i];
   }
 
@@ -44,8 +45,7 @@ static void prn_nstr(char *print_buf, size_t *print_buf_i, const char *string,
   size_t i;
 
   for (i = 0; i < len; i++) {
-    if (*print_buf_i == (PRINT_BUF_MAX - 1))
-      break;
+    if (*print_buf_i == (PRINT_BUF_MAX - 1)) break;
     print_buf[(*print_buf_i)++] = string[i];
   }
 
@@ -62,8 +62,7 @@ static void prn_i(char *print_buf, size_t *print_buf_i, int64_t x) {
   }
 
   int sign = x < 0;
-  if (sign)
-    x = -x;
+  if (sign) x = -x;
 
   for (i = 18; x; i--) {
     buf[i] = (x % 10) + 0x30;
@@ -118,75 +117,73 @@ void vprint(const char *fmt, va_list args) {
   size_t print_buf_i = 0;
 
   for (;;) {
-    while (*fmt && *fmt != '%')
-      prn_char(print_buf, &print_buf_i, *fmt++);
+    while (*fmt && *fmt != '%') prn_char(print_buf, &print_buf_i, *fmt++);
 
-    if (!*fmt++)
-      goto out;
+    if (!*fmt++) goto out;
 
     switch (*fmt++) {
-    case 's': {
-      char *str = (char *)va_arg(args, const char *);
-      if (!str)
-        prn_str(print_buf, &print_buf_i, "(null)");
-      else
-        prn_str(print_buf, &print_buf_i, str);
-    } break;
-    case 'S': {
-      char *str = (char *)va_arg(args, const char *);
-      size_t str_len = va_arg(args, size_t);
-      if (!str)
-        prn_str(print_buf, &print_buf_i, "(null)");
-      else
-        prn_nstr(print_buf, &print_buf_i, str, str_len);
-    } break;
-    case 'd':
-      prn_i(print_buf, &print_buf_i, (int64_t)va_arg(args, int32_t));
-      break;
-    case 'u':
-      prn_ui(print_buf, &print_buf_i, (uint64_t)va_arg(args, uint32_t));
-      break;
-    case 'x':
-      prn_x(print_buf, &print_buf_i, (uint64_t)va_arg(args, uint32_t));
-      break;
-    case 'D':
-      prn_i(print_buf, &print_buf_i, va_arg(args, int64_t));
-      break;
-    case 'U':
-      prn_ui(print_buf, &print_buf_i, va_arg(args, uint64_t));
-      break;
-    case 'X':
-      prn_x(print_buf, &print_buf_i, va_arg(args, uint64_t));
-      break;
-    case 'p':
-      prn_x(print_buf, &print_buf_i, va_arg(args, uintptr_t));
-      break;
-    case 'c': {
-      char c = (char)va_arg(args, int);
-      prn_char(print_buf, &print_buf_i, c);
-    } break;
-    case '#': {
-      bool printed = false;
-      char *str = (char *)va_arg(args, const char *);
-      for (int i = (int)_strlen(str) - 1; i >= 0; i--) {
-        if (str[i] != '#') {
-          continue;
+      case 's': {
+        char *str = (char *)va_arg(args, const char *);
+        if (!str)
+          prn_str(print_buf, &print_buf_i, "(null)");
+        else
+          prn_str(print_buf, &print_buf_i, str);
+      } break;
+      case 'S': {
+        char *str = (char *)va_arg(args, const char *);
+        size_t str_len = va_arg(args, size_t);
+        if (!str)
+          prn_str(print_buf, &print_buf_i, "(null)");
+        else
+          prn_nstr(print_buf, &print_buf_i, str, str_len);
+      } break;
+      case 'd':
+        prn_i(print_buf, &print_buf_i, (int64_t)va_arg(args, int32_t));
+        break;
+      case 'u':
+        prn_ui(print_buf, &print_buf_i, (uint64_t)va_arg(args, uint32_t));
+        break;
+      case 'x':
+        prn_x(print_buf, &print_buf_i, (uint64_t)va_arg(args, uint32_t));
+        break;
+      case 'D':
+        prn_i(print_buf, &print_buf_i, va_arg(args, int64_t));
+        break;
+      case 'U':
+        prn_ui(print_buf, &print_buf_i, va_arg(args, uint64_t));
+        break;
+      case 'X':
+        prn_x(print_buf, &print_buf_i, va_arg(args, uint64_t));
+        break;
+      case 'p':
+        prn_x(print_buf, &print_buf_i, va_arg(args, uintptr_t));
+        break;
+      case 'c': {
+        char c = (char)va_arg(args, int);
+        prn_char(print_buf, &print_buf_i, c);
+      } break;
+      case '#': {
+        bool printed = false;
+        char *str = (char *)va_arg(args, const char *);
+        for (int i = (int)_strlen(str) - 1; i >= 0; i--) {
+          if (str[i] != '#') {
+            continue;
+          }
+
+          prn_nstr(print_buf, &print_buf_i, str, i);
+          printed = true;
+          break;
         }
 
-        prn_nstr(print_buf, &print_buf_i, str, i);
-        printed = true;
+        if (!printed) {
+          prn_str(print_buf, &print_buf_i, str);
+        }
+
         break;
       }
-
-      if (!printed) {
-        prn_str(print_buf, &print_buf_i, str);
-      }
-
-      break;
-    }
-    default:
-      prn_char(print_buf, &print_buf_i, '?');
-      break;
+      default:
+        prn_char(print_buf, &print_buf_i, '?');
+        break;
     }
   }
 

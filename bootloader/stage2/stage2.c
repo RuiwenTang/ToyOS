@@ -1,4 +1,6 @@
 
+#include <boot/toy_boot.h>
+
 #include "disk/fat.h"
 #include "elf.h"
 #include "printf.h"
@@ -11,7 +13,7 @@
 struct MemoryRegion g_mem_region[MAX_MEMORY_BLOCK];
 uint32_t g_mem_region_count = 0;
 
-typedef void (*KernelStart)();
+typedef void (*KernelStart)(BootInfo *);
 
 int detect_memory() {
   uint32_t next = 0;
@@ -37,7 +39,8 @@ int detect_memory() {
 }
 
 void stage2_main(void *info, uint16_t boot_drive) {
-
+  struct vbe_mode_info_structure *vbe_info =
+      (struct vbe_mode_info_structure *)info;
   screen_init((struct vbe_mode_info_structure *)info);
   screen_clear();
 
@@ -79,7 +82,18 @@ void stage2_main(void *info, uint16_t boot_drive) {
 
   KernelStart entry = (KernelStart)kernel_entry;
 
-  entry();
+  BootInfo boot_info;
+
+  boot_info.frame_buffer.addr = vbe_info->framebuffer;
+  boot_info.frame_buffer.width = vbe_info->width;
+  boot_info.frame_buffer.height = vbe_info->height;
+  boot_info.frame_buffer.pitch = vbe_info->pitch;
+  boot_info.frame_buffer.bpp = vbe_info->bpp / 8;
+
+  boot_info.memory_info = g_mem_region;
+  boot_info.memory_info_count = g_mem_region_count;
+
+  entry(&boot_info);
 
   return;
 }
