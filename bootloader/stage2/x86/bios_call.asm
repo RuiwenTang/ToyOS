@@ -112,6 +112,80 @@ bios_disk_read:
     pop ebp
     ret
 
+E820Signature   equ 0x534D4150
+global bios_memory_detect
+bios_memory_detect:
+[bits 32]
+    push ebp
+    mov ebp, esp
+
+    x86_EnterRealMode
+
+    ; save modified regs
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+    push ds
+    push es
+
+    ; calculate ES:DI value
+    mov ebx, [ebp + 8]
+
+    shr ebx, 4
+    mov es, bx
+
+    mov ebx, [ebp + 8]
+    and ebx, 0xF
+    mov di, bx
+
+    ; next ebx value
+    mov eax, [ebp + 12]
+    mov ebx, [eax]
+
+    mov eax, 0xE820 ; function number
+    mov edx, E820Signature
+    mov ecx, 24
+
+    int 0x15
+
+    cmp eax, E820Signature
+    jne bios_memory_detect.error
+
+.success:
+    mov eax, [ebp + 12]
+    mov [eax], ebx
+    mov eax, ecx
+
+    jmp bios_memory_detect.end
+.error:
+    mov eax, -1
+    jmp bios_memory_detect.end
+
+.end:
+    ; restore regs
+    pop es
+    pop ds
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+
+    ;save returl value
+    push eax
+
+    x86_EnterProtectedMode
+
+    pop eax
+
+    ; restore esp and return
+    mov esp, ebp
+    pop ebp
+
+    ret
+
 section .data
 ; read disk parameter
 read_param:

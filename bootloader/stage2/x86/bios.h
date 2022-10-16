@@ -21,4 +21,21 @@
  */
 int ASMFUNC bios_disk_read(uint8_t drive, uint32_t lba_start, void *data_out);
 
+enum MEM_TYPE {
+  USABLE = 1,
+  RESERVED = 2,
+  ACPI_RECLAI = 3,
+  ACPI_NVS = 4,
+  BAD_MEMORY = 5,
+};
+
+struct MemoryRegion {
+  uint64_t base;
+  uint64_t length;
+  uint32_t type;
+  uint32_t acpi;
+};
+
+int ASMFUNC bios_memory_detect(struct MemoryRegion *mem, uint32_t *continue_id);
+
 #endif // BOOT_X86_BIOS_H

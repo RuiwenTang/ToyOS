@@ -110,9 +110,10 @@ static int elf_load_stage2(Elf32_Ehdr *hdr) {
   Elf32_Phdr *p_hdr = ((uint8_t *)hdr) + hdr->e_phoff;
 
   for (uint32_t i = 0; i < hdr->e_phnum; i++) {
-    printf("program paddr : %x | file size: %x | file offset: %x | type: %d \n",
+    printf("program paddr : %x | file size: %x | file offset: %x | mem size: "
+           "%x | type: %d \n",
            p_hdr[i].p_paddr, p_hdr[i].p_filesz, p_hdr[i].p_offset,
-           p_hdr[i].p_type);
+           p_hdr[i].p_memsz, p_hdr[i].p_type);
     elf_memcpy((void *)p_hdr[i].p_paddr, ((uint8_t *)hdr) + p_hdr[i].p_offset,
                p_hdr[i].p_filesz);
   }

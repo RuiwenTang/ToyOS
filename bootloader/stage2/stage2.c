@@ -3,10 +3,38 @@
 #include "elf.h"
 #include "printf.h"
 #include "screen/screen.h"
+#include "x86/bios.h"
 
 #define KERNEL_FILE_ADDR 0x10000
+#define MAX_MEMORY_BLOCK 256
+
+struct MemoryRegion g_mem_region[MAX_MEMORY_BLOCK];
+uint32_t g_mem_region_count = 0;
 
 typedef void (*KernelStart)();
+
+int detect_memory() {
+  uint32_t next = 0;
+
+  int ret = 0;
+
+  do {
+    ret = bios_memory_detect(g_mem_region + g_mem_region_count, &next);
+
+    if (ret == -1) {
+      return 1;
+    }
+
+    printf("memory at: %x | length: %x | type: %d \n",
+           (uint32_t)g_mem_region[g_mem_region_count].base,
+           (uint32_t)g_mem_region[g_mem_region_count].length,
+           g_mem_region[g_mem_region_count].type);
+
+    g_mem_region_count++;
+  } while (next != 0);
+
+  return 0;
+}
 
 void stage2_main(void *info, uint16_t boot_drive) {
 
@@ -15,6 +43,12 @@ void stage2_main(void *info, uint16_t boot_drive) {
 
   printf("Print In Protect Mode: fb addr is %x \n",
          ((struct vbe_mode_info_structure *)info)->framebuffer);
+
+  // detect memory
+  if (detect_memory()) {
+    screen_print("memory detect failed!", 21, SCREEN_COLOR_RED);
+    return;
+  }
 
   if (fat_init(boot_drive)) {
     screen_print("fat init failed!", 16, SCREEN_COLOR_RED);
