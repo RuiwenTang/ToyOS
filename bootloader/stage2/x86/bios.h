@@ -1,6 +1,7 @@
 #ifndef BOOT_X86_BIOS_H
 #define BOOT_X86_BIOS_H
 
+#include <boot/toy_boot.h>
 #include <stdint.h>
 
 // just a mark
@@ -23,4 +24,4 @@ int ASMFUNC bios_disk_read(uint8_t drive, uint32_t lba_start, void *data_out);
 
 int ASMFUNC bios_memory_detect(struct MemoryRegion *mem, uint32_t *continue_id);
 
-#endif // BOOT_X86_BIOS_H
+#endif  // BOOT_X86_BIOS_H
