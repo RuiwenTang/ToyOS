@@ -1,6 +1,10 @@
 
 #include <boot/toy_boot.h>
 
+#include "x86/gdt.h"
+
+void system_init() { gdt_install(); }
+
 void kernel_main(BootInfo *boot_info) {
   uint8_t *addr = (uint8_t *)boot_info->frame_buffer.addr;
 
@@ -18,4 +22,6 @@ void kernel_main(BootInfo *boot_info) {
   int *p = (int *)0x100000;
 
   *p = 0xAABBCCDD;
+
+  system_init();
 }

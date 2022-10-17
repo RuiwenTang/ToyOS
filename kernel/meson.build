@@ -1,8 +1,10 @@
 
 
 kernel_src = [
-  nasm_c.process(['src/boot/entry.asm']),
+  nasm_c.process(['src/boot/entry.asm', 'src/x86/gdt.asm']),
   'src/kmain.c',
+  'src/x86/gdt.c',
+  'src/x86/gdt.h',
 ]
 
 kernel_c_flags = [
@@ -27,7 +29,7 @@ kernel_sys = executable(
     'kernel.sys',
     sources: kernel_src,
     include_directories: [
-      '.',
+      './src',
     ],
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
