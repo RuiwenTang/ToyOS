@@ -4,6 +4,8 @@ GDT_PTR gdt_ptr;
 
 static GDT_ENTRY gdt[GDT_ENTRIES];
 
+static TSS_ENTRY tss;
+
 // implement in gdt.asm
 extern void gdt_flush(GDT_PTR *);
 
@@ -20,7 +22,7 @@ void configure_gdt_entry(GDT_ENTRY *entry, uint32_t base, uint32_t limit,
   entry->access = access;
 }
 
-void gdt_install(void) {
+void gdt_install(uint32_t kernel_stack) {
   gdt_ptr.limit = (sizeof(GDT_ENTRY) * GDT_ENTRIES) - 1;
   gdt_ptr.base = (size_t)&gdt;
 
@@ -51,8 +53,16 @@ void gdt_install(void) {
       GDT_FLAG_RING3 | GDT_FLAG_SEGMENT | GDT_FLAG_DATASEG | GDT_FLAG_PRESENT,
       GDT_FLAG_32_BIT | GDT_FLAG_4K_GRAN);
 
+  tss.eflags = 0x1202;
+  tss.ss0 = 0x10;
+  tss.esp0 = kernel_stack;
+  tss.cs = 0x0b;
+  tss.ss = tss.ds = tss.es = tss.fs = tss.gs = 0x13;
+
   // TODO config tss
-  configure_gdt_entry(&gdt[5], 0, 0, 0, 0);
+  configure_gdt_entry(&gdt[5], (uint32_t)&tss, sizeof(TSS_ENTRY) - 1,
+                      GDT_FLAG_PRESENT | GDT_FLAG_TSS | GDT_FLAG_RING0,
+                      GDT_FLAG_32_BIT | GDT_FLAG_4K_GRAN);
 
   gdt_flush(&gdt_ptr);
 }

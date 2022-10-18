@@ -14,6 +14,7 @@ extern kernel_main
 start:
   mov ebx, [esp + 4]
   mov esp, stack_top
+  push esp
   push ebx
   call kernel_main
 

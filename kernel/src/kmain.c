@@ -1,27 +1,23 @@
 
 #include <boot/toy_boot.h>
 
+#include "kprintf.h"
+#include "screen/screen.h"
 #include "x86/gdt.h"
 
-void system_init() { gdt_install(); }
+void system_init(uint32_t stack) { gdt_install(stack); }
 
-void kernel_main(BootInfo *boot_info) {
-  uint8_t *addr = (uint8_t *)boot_info->frame_buffer.addr;
+void kernel_main(BootInfo *boot_info, uint32_t stack) {
+  screen_init(&boot_info->frame_buffer);
+  screen_set_color(SCREEN_COLOR_WHITE);
+  screen_clear();
 
-  for (uint32_t x = 0; x < boot_info->frame_buffer.width; x++) {
-    for (uint32_t y = 0; y < boot_info->frame_buffer.height; y++) {
-      uint8_t *pix = addr + y * boot_info->frame_buffer.pitch +
-                     x * boot_info->frame_buffer.bpp;
+  kprintf("Now kernel is in charge and never go back to real mode!!\n");
 
-      for (uint32_t i = 0; i < boot_info->frame_buffer.bpp; i++) {
-        pix[i] = 0xff;
-      }
-    }
-  }
+  kprintf("Screen addr is :%x | kernel stack: %x\n",
+          boot_info->frame_buffer.addr, stack - 20);
 
-  int *p = (int *)0x100000;
+  uint32_t kernel_stack = stack - 4 * 5;
 
-  *p = 0xAABBCCDD;
-
-  system_init();
+  system_init(kernel_stack);
 }
