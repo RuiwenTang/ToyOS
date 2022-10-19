@@ -3,7 +3,12 @@
 buildin_font_inc = subproject('font8x8').get_variable('font8x8_incdir')
 
 kernel_src = [
-  nasm_c.process(['src/boot/entry.asm', 'src/x86/gdt.asm', 'src/x86/idt.asm']),
+  nasm_c.process([
+    'src/boot/entry.asm',
+    'src/x86/gdt.asm',
+    'src/x86/idt.asm',
+    'src/x86/isr.asm',
+  ]),
   'src/kmain.c',
   'src/kprintf.c',
   'src/kprintf.h',
@@ -13,6 +18,8 @@ kernel_src = [
   'src/x86/gdt.h',
   'src/x86/idt.c',
   'src/x86/idt.h',
+  'src/x86/isr.h',
+  'src/x86/isr.c',
 ]
 
 kernel_c_flags = [
