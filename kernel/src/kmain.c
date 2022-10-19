@@ -4,8 +4,12 @@
 #include "kprintf.h"
 #include "screen/screen.h"
 #include "x86/gdt.h"
+#include "x86/idt.h"
 
-void system_init(uint32_t stack) { gdt_install(stack); }
+void system_init(uint32_t stack) {
+  gdt_install(stack);
+  idt_intall();
+}
 
 void kernel_main(BootInfo *boot_info, uint32_t stack) {
   screen_init(&boot_info->frame_buffer);
