@@ -8,6 +8,7 @@ kernel_src = [
     'src/x86/gdt.asm',
     'src/x86/idt.asm',
     'src/x86/isr.asm',
+    'src/x86/io.asm',
   ]),
   'src/kmain.c',
   'src/kprintf.c',
@@ -18,8 +19,11 @@ kernel_src = [
   'src/x86/gdt.h',
   'src/x86/idt.c',
   'src/x86/idt.h',
-  'src/x86/isr.h',
+  'src/x86/io.h',
   'src/x86/isr.c',
+  'src/x86/isr.h',
+  'src/x86/pic.c',
+  'src/x86/pic.h',
 ]
 
 kernel_c_flags = [
