@@ -101,3 +101,5 @@ void screen_print(char *str, uint32_t len, uint32_t color) {
   g_kernel_screen.pos_x = curr_x;
   g_kernel_screen.pos_y = curr_y;
 }
+
+void screen_update_base(uint32_t base) { g_kernel_screen.addr = base; }

@@ -13,7 +13,7 @@ void system_init(BootInfo* info, uint32_t stack) {
   page_init(info);
 }
 
-void kernel_main(BootInfo *boot_info, uint32_t stack) {
+void kernel_main(BootInfo* boot_info, uint32_t stack) {
   screen_init(&boot_info->frame_buffer);
   screen_set_color(SCREEN_COLOR_WHITE);
   screen_clear();

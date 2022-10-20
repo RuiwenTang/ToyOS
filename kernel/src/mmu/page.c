@@ -4,12 +4,13 @@
 #include <stdint.h>
 
 #include "kprintf.h"
+#include "screen/screen.h"
 
 extern const void kernel_start;
 extern const void kernel_end;
 
 // may be this should set in screen.c
-uint32_t screen_phy_base = 0;
+uint32_t screen_phy_base = 0x400000;
 
 PageDirectory g_pd[1024] __attribute__((aligned(4096)));
 
@@ -47,8 +48,7 @@ void page_init(BootInfo* info) {
 
   page_enable();
 
-  uint32_t* p = (uint32_t*)0x300000;
-  *p = 0xaabbccdd;
+  kprintf("aaaaa \n");
 }
 
 void page_init_tables(uint32_t total_memory, Framebuffer* info) {
@@ -87,4 +87,37 @@ void page_init_tables(uint32_t total_memory, Framebuffer* info) {
   }
 
   kprintf("last page_table at: %x \n", (uint32_t)current);
+
+  screen_phy_base = (uint32_t)current;
+  screen_phy_base += 0xFFFFF;
+  screen_phy_base &= 0xFFF00000;
+
+  kprintf("screen_phy_base = %x \n", screen_phy_base);
+
+  uint32_t memory = info->height * info->pitch;
+
+  uint32_t page_count = (memory + 0xfff) / 0x1000;
+
+  uint32_t base = info->addr;
+
+  uint32_t pd_i = screen_phy_base / (4 * 1024 * 1024);
+
+  uint32_t pt_i = (screen_phy_base >> 12) % 0x1000;
+
+  kprintf("pd_i = %d | pt_i = %d \n", pd_i, pt_i);
+
+  Page* page = (Page*)(g_pd[pd_i].frame << 12);
+  page += pt_i;
+
+  kprintf("start page at : %x \n", (uint32_t)page);
+
+  for (uint32_t i = 0; i < page_count; i++) {
+    page[i].address = (base >> 12);
+    page[i].present = 1;
+    page[i].rw = 1;
+
+    base += 0x1000;
+  }
+
+  screen_update_base(screen_phy_base);
 }
