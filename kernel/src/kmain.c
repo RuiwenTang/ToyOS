@@ -2,13 +2,15 @@
 #include <boot/toy_boot.h>
 
 #include "kprintf.h"
+#include "mmu/page.h"
 #include "screen/screen.h"
 #include "x86/gdt.h"
 #include "x86/idt.h"
 
-void system_init(uint32_t stack) {
+void system_init(BootInfo* info, uint32_t stack) {
   gdt_install(stack);
   idt_intall();
+  page_init(info);
 }
 
 void kernel_main(BootInfo *boot_info, uint32_t stack) {
@@ -23,5 +25,5 @@ void kernel_main(BootInfo *boot_info, uint32_t stack) {
 
   uint32_t kernel_stack = stack - 4 * 5;
 
-  system_init(kernel_stack);
+  system_init(boot_info, kernel_stack);
 }
