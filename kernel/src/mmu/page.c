@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "kprintf.h"
+#include "mmu/heap.h"
 #include "screen/screen.h"
 
 extern const void kernel_start;
@@ -46,7 +47,16 @@ void page_init(BootInfo* info) {
 
   page_enable();
 
-  kprintf("Print after page enable, screen is mapped");
+  uint32_t kernel_heap = (uint32_t)g_page_table_tail;
+  // fine page for kernel heap usage
+  uint32_t kernel_size = 0x1000 * 5;
+
+  heap_init((void*)kernel_heap, kernel_size);
+
+  kprintf("Print after page enable, screen is mapped!\n");
+
+  uint32_t free_space = kernel_heap + kernel_size;
+  kprintf("FreeMemory begin at %x \n", free_space);
 }
 
 void page_init_tables(uint32_t total_memory, Framebuffer* info) {

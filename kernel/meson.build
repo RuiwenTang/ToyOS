@@ -15,9 +15,12 @@ kernel_src = [
   'klibc/stdio.h',
   'klibc/string.c',
   'klibc/string.h',
+  'src/cxx_runtime.cc',
   'src/kmain.c',
   'src/kprintf.c',
   'src/kprintf.h',
+  'src/mmu/heap.c',
+  'src/mmu/heap.h',
   'src/mmu/page.c',
   'src/mmu/page.h',
   'src/screen/screen.c',
@@ -37,12 +40,14 @@ kernel_c_flags = [
   '-ffreestanding',
   '-fno-builtin',
   '-nostdlib',
-  '-nostdinc++',
 ]
 
 kernel_cpp_args = [
     '-fno-exceptions',
+    '-ffreestanding',
+    '-fno-builtin',
     '-std=c++14',
+    '-nostdinc++',
 ]
 
 kernel_link_args = [

@@ -2,6 +2,7 @@
 #include <boot/toy_boot.h>
 
 #include "kprintf.h"
+#include "mmu/heap.h"
 #include "mmu/page.h"
 #include "screen/screen.h"
 #include "x86/gdt.h"
