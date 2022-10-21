@@ -1,6 +1,7 @@
 
 # external dependency
 buildin_font_inc = subproject('font8x8').get_variable('font8x8_incdir')
+umm_malloc = subproject('umm_malloc').get_variable('umm_malloc_dep')
 
 kernel_src = [
   nasm_c.process([
@@ -11,6 +12,9 @@ kernel_src = [
     'src/x86/io.asm',
     'src/mmu/page.asm',
   ]),
+  'klibc/stdio.h',
+  'klibc/string.c',
+  'klibc/string.h',
   'src/kmain.c',
   'src/kprintf.c',
   'src/kprintf.h',
@@ -52,11 +56,12 @@ kernel_sys = executable(
     sources: kernel_src,
     include_directories: [
       './src',
+      'klibc',
       buildin_font_inc,
     ],
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
     cpp_args: kernel_cpp_args,
-    dependencies: [toy_boot],
+    dependencies: [toy_boot, umm_malloc],
 )
 
