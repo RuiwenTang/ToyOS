@@ -23,6 +23,8 @@ kernel_src = [
   'src/mmu/heap.h',
   'src/mmu/page.cc',
   'src/mmu/page.h',
+  'src/mmu/page_allocator.cc',
+  'src/mmu/page_allocator.hpp',
   'src/screen/screen.c',
   'src/screen/screen.h',
   'src/x86/gdt.c',
@@ -69,4 +71,6 @@ kernel_sys = executable(
     cpp_args: kernel_cpp_args,
     dependencies: [toy_boot, umm_malloc],
 )
+
+
 

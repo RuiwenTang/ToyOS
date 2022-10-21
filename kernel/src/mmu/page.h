@@ -48,20 +48,4 @@ void page_enable();
 }
 #endif
 
-#ifdef __cplusplus
-
-class Page {
- public:
-  ~Page() = default;
-
-  static void Init(uint32_t free_base, uint32_t free_size);
-
- private:
-  Page();
-
- private:
-};
-
-#endif
-
 #endif  // TOY_MMU_PAGE_H
