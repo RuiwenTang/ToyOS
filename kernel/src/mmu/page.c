@@ -9,16 +9,14 @@
 extern const void kernel_start;
 extern const void kernel_end;
 
-// may be this should set in screen.c
-uint32_t screen_phy_base = 0x400000;
-
 PageDirectory g_pd[1024] __attribute__((aligned(4096)));
 
 Page* g_page_table_head = NULL;
+Page* g_page_table_tail = NULL;
 
 static void page_init_tables(uint32_t total_memory, Framebuffer* info);
 
-static void page_map_screen(Framebuffer* info, uint32_t base, Page* page_table);
+static void page_map_screen(Framebuffer* info);
 
 void page_init(BootInfo* info) {
   g_page_table_head = (Page*)((((uint32_t)&kernel_end) + 0xfff) & 0xFFFFF000);
@@ -48,7 +46,7 @@ void page_init(BootInfo* info) {
 
   page_enable();
 
-  kprintf("aaaaa \n");
+  kprintf("Print after page enable, screen is mapped");
 }
 
 void page_init_tables(uint32_t total_memory, Framebuffer* info) {
@@ -86,38 +84,62 @@ void page_init_tables(uint32_t total_memory, Framebuffer* info) {
     }
   }
 
-  kprintf("last page_table at: %x \n", (uint32_t)current);
+  g_page_table_tail = current + 1024;
+  kprintf("last page_table at: %x \n", (uint32_t)g_page_table_tail);
 
-  screen_phy_base = (uint32_t)current;
-  screen_phy_base += 0xFFFFF;
-  screen_phy_base &= 0xFFF00000;
+  page_map_screen(info);
+}
 
-  kprintf("screen_phy_base = %x \n", screen_phy_base);
+void page_map_screen(Framebuffer* info) {
+  uint32_t total_memory = info->height * info->pitch;
+  total_memory += 0xfff;
+  total_memory &= 0xfffff000;
 
-  uint32_t memory = info->height * info->pitch;
-
-  uint32_t page_count = (memory + 0xfff) / 0x1000;
+  uint32_t dir_count = (total_memory + 0x3fffff) / 0x400000;
+  uint32_t page_count = (total_memory + 0xfff) / 0x1000;
 
   uint32_t base = info->addr;
 
-  uint32_t pd_i = screen_phy_base / (4 * 1024 * 1024);
+  Page* current = g_page_table_tail;
 
-  uint32_t pt_i = (screen_phy_base >> 12) % 0x1000;
+  for (uint32_t i = 0; i < dir_count; i++) {
+    if (total_memory == 0 || page_count == 0) {
+      break;
+    }
 
-  kprintf("pd_i = %d | pt_i = %d \n", pd_i, pt_i);
+    uint32_t dir_index = base / 0x400000;
+    g_pd[dir_index].present = 1;
+    g_pd[dir_index].rw = 1;
+    g_pd[dir_index].user = 0;
+    g_pd[dir_index].unused = 0;
 
-  Page* page = (Page*)(g_pd[pd_i].frame << 12);
-  page += pt_i;
+    g_pd[dir_index].frame = ((uint32_t)current) >> 12;
 
-  kprintf("start page at : %x \n", (uint32_t)page);
+    uint32_t j = 0;
+    for (; j < 1024; j++) {
+      current[j].present = 1;
+      current[j].rw = 1;
+      current[j].user = 0;
+      current[j].unused = 0;
 
-  for (uint32_t i = 0; i < page_count; i++) {
-    page[i].address = (base >> 12);
-    page[i].present = 1;
-    page[i].rw = 1;
+      current[j].address = base >> 12;
 
-    base += 0x1000;
+      base += 0x1000;
+      total_memory -= 0x1000;
+
+      if (total_memory <= 0) {
+        break;
+      }
+    }
+    page_count -= j;
+    current += j;
   }
 
-  screen_update_base(screen_phy_base);
+  uint32_t current_align = (uint32_t)current;
+  current_align += 0xfff;
+  current_align &= 0xfffff000;
+
+  g_page_table_tail = (Page*)current_align;
+
+  kprintf("page_tail after map screen : %x \n", (uint32_t)g_page_table_tail);
 }

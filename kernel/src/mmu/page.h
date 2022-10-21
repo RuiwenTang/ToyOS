@@ -40,12 +40,6 @@ typedef struct {
 
 void page_init(BootInfo* info);
 
-/**
- * Map virtual address to physical address
- * This function is used in kernel code, and not check if address is 4K align
- */
-void page_map(uint32_t virtual_addr, uint32_t phy_addr);
-
 void page_load_directory(void* pdr);
 
 void page_enable();

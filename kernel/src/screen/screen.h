@@ -15,6 +15,4 @@ void screen_clear();
 
 void screen_print(char* str, uint32_t len, uint32_t color);
 
-void screen_update_base(uint32_t base);
-
 #endif  // KERNEL_SCREEN_SCREEN_H
