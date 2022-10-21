@@ -7,20 +7,23 @@
 #include "mmu/heap.h"
 #include "screen/screen.h"
 
-extern const void kernel_start;
-extern const void kernel_end;
+extern "C" {
+extern const void* kernel_start;
+extern const void* kernel_end;
+}
 
 PageDirectory g_pd[1024] __attribute__((aligned(4096)));
 
-Page* g_page_table_head = NULL;
-Page* g_page_table_tail = NULL;
+PageEntry* g_page_table_head = NULL;
+PageEntry* g_page_table_tail = NULL;
 
 static void page_init_tables(uint32_t total_memory, Framebuffer* info);
 
 static void page_map_screen(Framebuffer* info);
 
 void page_init(BootInfo* info) {
-  g_page_table_head = (Page*)((((uint32_t)&kernel_end) + 0xfff) & 0xFFFFF000);
+  g_page_table_head =
+      (PageEntry*)((((uint32_t)&kernel_end) + 0xfff) & 0xFFFFF000);
   uint32_t total_memory = 0;
   for (uint32_t i = 0; i < info->memory_info_count; i++) {
     kprintf("MemoryRegion: base: %x | length %x | type: %d\n",
@@ -61,7 +64,7 @@ void page_init(BootInfo* info) {
 
 void page_init_tables(uint32_t total_memory, Framebuffer* info) {
   // 1 : 1 map in kernel
-  Page* current = NULL;
+  PageEntry* current = NULL;
   uint32_t i = 0;
   for (i = 0; i < 1024; i++) {
     if (total_memory > 0) {
@@ -110,7 +113,7 @@ void page_map_screen(Framebuffer* info) {
 
   uint32_t base = info->addr;
 
-  Page* current = g_page_table_tail;
+  PageEntry* current = g_page_table_tail;
 
   for (uint32_t i = 0; i < dir_count; i++) {
     if (total_memory == 0 || page_count == 0) {
@@ -149,7 +152,7 @@ void page_map_screen(Framebuffer* info) {
   current_align += 0xfff;
   current_align &= 0xfffff000;
 
-  g_page_table_tail = (Page*)current_align;
+  g_page_table_tail = (PageEntry*)current_align;
 
   kprintf("page_tail after map screen : %x \n", (uint32_t)g_page_table_tail);
 }

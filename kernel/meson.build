@@ -21,7 +21,7 @@ kernel_src = [
   'src/kprintf.h',
   'src/mmu/heap.c',
   'src/mmu/heap.h',
-  'src/mmu/page.c',
+  'src/mmu/page.cc',
   'src/mmu/page.h',
   'src/screen/screen.c',
   'src/screen/screen.h',

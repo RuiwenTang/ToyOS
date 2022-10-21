@@ -36,7 +36,7 @@ typedef struct {
   uint32_t global : 1;    // global bits
   uint32_t unused : 3;    // unused
   uint32_t address : 20;  // physical address
-} Page;
+} PageEntry;
 
 void page_init(BootInfo* info);
 
@@ -46,6 +46,22 @@ void page_enable();
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+
+class Page {
+ public:
+  ~Page() = default;
+
+  static void Init(uint32_t free_base, uint32_t free_size);
+
+ private:
+  Page();
+
+ private:
+};
+
 #endif
 
 #endif  // TOY_MMU_PAGE_H
