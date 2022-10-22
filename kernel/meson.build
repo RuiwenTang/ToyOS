@@ -15,7 +15,6 @@ kernel_src = [
   'klibc/stdio.h',
   'klibc/string.c',
   'klibc/string.h',
-  'src/cxx_runtime.cc',
   'src/kmain.c',
   'src/kprintf.c',
   'src/kprintf.h',

@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
   uint32_t addr;
   uint32_t width;
@@ -33,5 +37,9 @@ typedef struct {
   uint32_t memory_info_count;
   Framebuffer frame_buffer;
 } BootInfo;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // BOOT_BOOT_H
