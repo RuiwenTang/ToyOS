@@ -22,6 +22,8 @@ kernel_src = [
   'src/mmu/heap.h',
   'src/mmu/page.c',
   'src/mmu/page.h',
+  'src/mmu/palloc.c',
+  'src/mmu/palloc.h',
   'src/screen/screen.c',
   'src/screen/screen.h',
   'src/x86/gdt.c',
@@ -68,4 +70,18 @@ kernel_sys = executable(
     cpp_args: kernel_cpp_args,
     dependencies: [toy_boot, umm_malloc],
 )
+
+gtest = subproject('gtest').get_variable('gtest_dep')
+
+executable(
+  'mmu_alloc_test',
+  native: true,
+  sources: [ 'src/mmu/palloc.h', 'src/mmu/palloc.c', 'src/mmu/palloc_test.cc' ],
+  include_directories: [
+    './src',
+  ],
+  c_args: [ '-DTOY_DEBUG' ],
+  cpp_args: [ '-std=c++17' ],
+  dependencies: [ gtest ],
+  )
 
