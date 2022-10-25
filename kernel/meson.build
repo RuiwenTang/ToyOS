@@ -81,7 +81,7 @@ executable(
     './src',
   ],
   c_args: [ '-DTOY_DEBUG' ],
-  cpp_args: [ '-std=c++17' ],
+  cpp_args: [ '-std=c++17', '-DTOY_DEBUG' ],
   dependencies: [ gtest ],
   )
 

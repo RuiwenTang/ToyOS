@@ -112,6 +112,12 @@ void remove_from_free_list(Region* region) {
 }
 
 void insert_into_list(Region** list, Region* region) {
+  if (*list == NULL) {
+    // fast path
+    *list = region;
+    return;
+  }
+
   Region* head = *list;
   if (region->base < head->base) {
     // fast path
@@ -121,7 +127,7 @@ void insert_into_list(Region** list, Region* region) {
   }
 
   Region* curr = head->next;
-  while (curr->base < region->base) {
+  while (curr && curr->base < region->base) {
     head = curr;
     curr = curr->next;
   }
@@ -160,6 +166,7 @@ void merge_free_list() {
       curr->length += next->length;
       curr->next = next->next;
       kfree(next);
+      continue;
     }
 
     curr = curr->next;
