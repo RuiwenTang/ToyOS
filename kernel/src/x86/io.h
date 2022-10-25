@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,8 +16,10 @@ void x86_enable_interrupt();
 
 void x86_disable_interrupt();
 
+void x86_iowait();
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif // TOY_X86_IO_H
+#endif  // TOY_X86_IO_H

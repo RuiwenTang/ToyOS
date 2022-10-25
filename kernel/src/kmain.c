@@ -7,11 +7,13 @@
 #include "screen/screen.h"
 #include "x86/gdt.h"
 #include "x86/idt.h"
+#include "x86/irq.h"
 
 void system_init(BootInfo* info, uint32_t stack) {
   gdt_install(stack);
-  idt_intall();
   page_init(info);
+  idt_intall();
+  irq_install();
 }
 
 void kernel_main(BootInfo* boot_info, uint32_t stack) {

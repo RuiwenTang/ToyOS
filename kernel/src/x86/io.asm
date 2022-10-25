@@ -30,3 +30,10 @@ global x86_disable_interrupt
 x86_disable_interrupt:
   cli
   ret
+
+; void x86_iowait();
+global x86_iowait
+x86_iowait:
+  nop
+  nop
+  ret

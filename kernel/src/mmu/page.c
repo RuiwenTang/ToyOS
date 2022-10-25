@@ -48,7 +48,7 @@ void page_init(BootInfo* info) {
   page_enable();
 
   uint32_t kernel_heap = (uint32_t)g_page_table_tail;
-  // fine page for kernel heap usage
+  // five page for kernel heap usage
   uint32_t kernel_size = 0x1000 * 5;
 
   heap_init((void*)kernel_heap, kernel_size);
