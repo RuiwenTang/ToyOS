@@ -8,12 +8,14 @@
 #include "x86/gdt.h"
 #include "x86/idt.h"
 #include "x86/irq.h"
+#include "x86/timer.h"
 
 void system_init(BootInfo* info, uint32_t stack) {
   gdt_install(stack);
   page_init(info);
   idt_intall();
   irq_install();
+  timer_init();
 }
 
 void kernel_main(BootInfo* boot_info, uint32_t stack) {
@@ -29,4 +31,7 @@ void kernel_main(BootInfo* boot_info, uint32_t stack) {
   uint32_t kernel_stack = stack - 4 * 5;
 
   system_init(boot_info, kernel_stack);
+
+  while (1)
+    ;
 }

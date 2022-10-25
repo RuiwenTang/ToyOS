@@ -24,6 +24,7 @@ void x86_irq_common_stub(Registers* regs) {
     g_irq_map[irq](regs);
   } else {
     // un handled IRQ
+    kprintf("Un handled irq at %d\n", irq);
   }
 
   g_driver->send_end_of_interrupt(irq);
@@ -58,3 +59,11 @@ void irq_install() {
 
   x86_enable_interrupt();
 }
+
+
+void irq_register_handler(int32_t irq, IRQHandler handler) {
+  g_irq_map[irq] = handler;
+
+  g_driver->unmask(irq);
+}
+

@@ -31,12 +31,14 @@ kernel_src = [
   'src/x86/idt.c',
   'src/x86/idt.h',
   'src/x86/io.h',
-  'src/x86/isr.c',
-  'src/x86/isr.h',
   'src/x86/irq.c',
   'src/x86/irq.h',
+  'src/x86/isr.c',
+  'src/x86/isr.h',
   'src/x86/pic.c',
   'src/x86/pic.h',
+  'src/x86/timer.c',
+  'src/x86/timer.h',
 ]
 
 kernel_c_flags = [
