@@ -44,6 +44,15 @@ extern "C" {
 #define GDT_FLAG_32_BIT 0x40
 #define GDT_FLAG_64_BIT 0x20
 
+#define SA_RPL0 0
+#define SA_RPL1 1
+#define SA_RPL2 2
+#define SA_RPL3 3
+
+// used for user process
+#define USER_CODE_SELECTOR (3 << 3) | SA_RPL3
+#define USER_DATA_SELECTOR (4 << 3) | SA_RPL3
+
 typedef struct {
   /// Lower 16 bits of limit range
   uint16_t limit_low;

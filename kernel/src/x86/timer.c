@@ -40,7 +40,5 @@ void timer_init() {
   x86_outb(TIMER0, (uint8_t)((TIMER_FREQ / HZ) >> 8));
   x86_iowait();
 
-
   irq_register_handler(TIMER_IRQ, &timer_irq_handler);
 }
-

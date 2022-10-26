@@ -6,8 +6,12 @@ static GDT_ENTRY gdt[GDT_ENTRIES];
 
 static TSS_ENTRY tss;
 
+TSS_ENTRY *g_tss = &tss;
+
 // implement in gdt.asm
 extern void gdt_flush(GDT_PTR *);
+
+extern void tss_flush(uint32_t tss_selector);
 
 void configure_gdt_entry(GDT_ENTRY *entry, uint32_t base, uint32_t limit,
                          uint8_t access, uint8_t gran) {
@@ -65,4 +69,6 @@ void gdt_install(uint32_t kernel_stack) {
                       GDT_FLAG_32_BIT | GDT_FLAG_4K_GRAN);
 
   gdt_flush(&gdt_ptr);
+
+  tss_flush((5 << 3));
 }

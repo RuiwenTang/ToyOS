@@ -6,11 +6,12 @@ umm_malloc = subproject('umm_malloc').get_variable('umm_malloc_dep')
 kernel_src = [
   nasm_c.process([
     'src/boot/entry.asm',
+    'src/mmu/page.asm',
+    'src/proc/proc.asm',
     'src/x86/gdt.asm',
     'src/x86/idt.asm',
-    'src/x86/isr.asm',
     'src/x86/io.asm',
-    'src/mmu/page.asm',
+    'src/x86/isr.asm',
   ]),
   'klibc/stdio.h',
   'klibc/string.c',
@@ -24,6 +25,8 @@ kernel_src = [
   'src/mmu/page.h',
   'src/mmu/palloc.c',
   'src/mmu/palloc.h',
+  'src/proc/proc.c',
+  'src/proc/proc.h',
   'src/screen/screen.c',
   'src/screen/screen.h',
   'src/x86/gdt.c',

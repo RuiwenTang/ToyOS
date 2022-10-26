@@ -24,7 +24,7 @@ x86_isr%1:
 
 
 isr_common:
-  pusha                 ; pushes all registers in orders:
+  pushad                ; pushes all registers in orders:
                         ; eax
                         ; ecx
                         ; edx
