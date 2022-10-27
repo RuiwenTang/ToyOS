@@ -1,10 +1,12 @@
 #include "disk/fat.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "disk/mbr.h"
 #include "printf.h"
 #include "screen/screen.h"
 #include "x86/bios.h"
-#include <stdbool.h>
-#include <stddef.h>
 
 #define MEM_DIR_BASE 0x70000
 
@@ -146,18 +148,18 @@ void fat_dump() {
   printf("disk oem name: %s\n", fat_bpb->oem_name);
 
   switch (g_fat_info.fat_type) {
-  case FAT_EXFAT:
-    printf("fat type: EXFAT\n");
-    break;
-  case FAT_FAT12:
-    printf("fat type: FAT12\n");
-    break;
-  case FAT_FAT16:
-    printf("fat type: FAT16\n");
-    break;
-  case FAT_FAT32:
-    printf("fat type: FAT32\n");
-    break;
+    case FAT_EXFAT:
+      printf("fat type: EXFAT\n");
+      break;
+    case FAT_FAT12:
+      printf("fat type: FAT12\n");
+      break;
+    case FAT_FAT16:
+      printf("fat type: FAT16\n");
+      break;
+    case FAT_FAT32:
+      printf("fat type: FAT32\n");
+      break;
   }
 
   printf("partion start lba: %d | sector count: %d\n", disk_lba_start,
@@ -185,7 +187,6 @@ struct DIR_ENTRY *boot_dir = NULL;
 struct FAT_FILE kernel_file;
 
 struct FAT_FILE *fat_kernel_file() {
-
   for (uint32_t i = 0; i < g_fat_info.root_dir_sectors; i++) {
     struct DIR_ENTRY *p_dir = g_root_dir + i * 512;
 
@@ -304,7 +305,6 @@ uint32_t total_cluster(uint32_t fist_cluster) {
 }
 
 int fat_load_file(struct FAT_FILE *file, uint32_t addr) {
-
   uint32_t curr = addr;
 
   uint32_t curr_cluster = file->fist_cluster;

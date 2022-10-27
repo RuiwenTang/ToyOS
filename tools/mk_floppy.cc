@@ -1,5 +1,4 @@
 
-#include "diskio.h"
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -7,7 +6,9 @@
 #include <iterator>
 #include <vector>
 
-#define SECTOR_COUNT 0x2800
+#include "diskio.h"
+
+#define SECTOR_COUNT 0x28000
 
 struct RamFloppy {
   std::vector<BYTE> disk;
@@ -72,7 +73,6 @@ DSTATUS RAM_disk_write(const BYTE *buf, LBA_t sector, UINT count) {
 }
 
 DSTATUS RAM_disk_ioctl(BYTE cmd, void *buff) {
-
   if (cmd == GET_SECTOR_COUNT) {
     *(LBA_t *)buff = SECTOR_COUNT;
   }
@@ -82,7 +82,6 @@ DSTATUS RAM_disk_ioctl(BYTE cmd, void *buff) {
 }
 
 int main(int argc, const char **argv) {
-
   FATFS fs;             /* Filesystem object */
   FIL fil;              /* File object */
   FRESULT res;          /* API result code */
@@ -90,10 +89,10 @@ int main(int argc, const char **argv) {
   BYTE work[FF_MAX_SS]; /* Work area (larger is better for processing time) */
 
   MKFS_PARM opt;
-  opt.fmt = FM_ANY;
+  opt.fmt = FM_FAT32;
   opt.n_fat = 2;
   opt.align = 512;
-  opt.au_size = 512;
+  opt.au_size = 0;
   opt.n_root = 0;
 
   res = f_mount(&fs, "", 0);
@@ -102,7 +101,7 @@ int main(int argc, const char **argv) {
 
   // res = f_fdisk(0, plist, work);
 
-  res = f_mkfs("", 0, work, sizeof work);
+  res = f_mkfs("", &opt, work, sizeof work);
 
   res = f_open(&fil, "newfile.txt", FA_WRITE | FA_CREATE_ALWAYS);
 
