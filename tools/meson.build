@@ -4,21 +4,14 @@ prog_python = import('python').find_installation('python3')
 mk_floppy = executable(
   'mk_floppy',
   native: true,
+  c_args: ['-DFF_USE_MKFS=1'],
   sources: [
-    'fatfs/diskio.c',
-    'fatfs/diskio.h',
-    'fatfs/ff.c',
-    'fatfs/ff.h',
-    'fatfs/ffconf.h',
-    'fatfs/ffsystem.c',
     'mk_floppy.cc',
-  ],
-  include_directories: [
-    'fatfs',
   ],
   cpp_args: [
     '-std=c++17',
-  ]
+  ],
+  dependencies: [ fatfs_dep ],
 )
 
 disk_img = custom_target(

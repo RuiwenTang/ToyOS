@@ -8,7 +8,7 @@
 
 #include "diskio.h"
 
-#define SECTOR_COUNT 0x28000
+#define SECTOR_COUNT 0x8000
 
 struct RamFloppy {
   std::vector<BYTE> disk;
@@ -89,7 +89,7 @@ int main(int argc, const char **argv) {
   BYTE work[FF_MAX_SS]; /* Work area (larger is better for processing time) */
 
   MKFS_PARM opt;
-  opt.fmt = FM_FAT32;
+  opt.fmt = FM_ANY;
   opt.n_fat = 2;
   opt.align = 512;
   opt.au_size = 0;
