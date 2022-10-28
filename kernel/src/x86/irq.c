@@ -16,7 +16,7 @@ IRQHandler g_irq_map[16];
 
 const PICDriver* g_driver = NULL;
 
-void x86_irq_common_stub(Registers* regs) {
+void x86_irq_common_stub(StackFrame* regs) {
   int32_t irq = regs->interrupt - PIC_REMAP_OFFSET;
 
   if (g_irq_map[irq] != NULL) {
@@ -60,10 +60,8 @@ void irq_install() {
   x86_enable_interrupt();
 }
 
-
 void irq_register_handler(int32_t irq, IRQHandler handler) {
   g_irq_map[irq] = handler;
 
   g_driver->unmask(irq);
 }
-

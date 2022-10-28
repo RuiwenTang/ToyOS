@@ -14,8 +14,9 @@ EBXREG          equ             KERNELESPREG + 4
 EDXREG          equ             EBXREG + 4
 ECXREG          equ             EDXREG + 4
 EAXREG          equ             ECXREG + 4
-RETADR          equ             EAXREG + 4
-EIPREG          equ             RETADR + 4
+INTNUM          equ             EAXREG + 4
+ERRNUM          equ             INTNUM + 4
+EIPREG          equ             ERRNUM + 4
 CSREG           equ             EIPREG + 4
 EFLAGSREG       equ             CSREG + 4
 ESPREG          equ             EFLAGSREG + 4
@@ -39,5 +40,5 @@ proc_restart:
   pop es
   pop ds
   popad
-  add esp, 4
+  add esp, 8    ; skip interrupt and error code
   iret

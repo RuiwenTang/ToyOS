@@ -3,7 +3,7 @@
 
 #include "x86/isr.h"
 
-typedef void (*IRQHandler)(Registers* regs);
+typedef void (*IRQHandler)(StackFrame* regs);
 
 void irq_install();
 

@@ -19,7 +19,7 @@
 #define TIME_COUNT_DOWN 1000
 volatile uint32_t g_timer_count_down = 0;
 
-void timer_irq_handler(Registers* regs) {
+void timer_irq_handler(StackFrame* regs) {
   if (g_timer_count_down == 0) {
     g_timer_count_down = TIME_COUNT_DOWN;
 

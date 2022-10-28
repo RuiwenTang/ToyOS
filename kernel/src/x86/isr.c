@@ -42,7 +42,7 @@ static const char* const g_Exceptions[] = {
     "",
 };
 
-void c_isr_handler(Registers* registers) {
+void c_isr_handler(StackFrame* registers) {
   if (g_isr_handler[registers->interrupt] != NULL) {
     g_isr_handler[registers->interrupt](registers);
   } else if (registers->interrupt >= 32) {

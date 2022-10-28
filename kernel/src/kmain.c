@@ -22,6 +22,7 @@ void system_init(BootInfo* info, uint32_t stack) {
 }
 
 void task_a() {
+  kprintf("task a running\n");
   while (1)
     ;
 }
