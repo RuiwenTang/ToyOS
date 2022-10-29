@@ -56,8 +56,6 @@ void irq_install() {
   for (int32_t i = 0; i < 16; i++) {
     isr_register_handler(PIC_REMAP_OFFSET + i, x86_irq_common_stub);
   }
-
-  x86_enable_interrupt();
 }
 
 void irq_register_handler(int32_t irq, IRQHandler handler) {

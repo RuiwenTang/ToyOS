@@ -18,11 +18,12 @@ void system_init(BootInfo* info, uint32_t stack) {
   page_init(info);
   idt_intall();
   irq_install();
-  // timer_init();
+  timer_init();
 }
 
 void task_a() {
-  kprintf("task a running\n");
+  kprintf("^");
+
   while (1)
     ;
 }
@@ -54,6 +55,7 @@ void kernel_main(BootInfo* boot_info, uint32_t stack) {
   proc->regs.esp = (uint32_t)(temp_stack + 1024);
   proc->regs.eflags = 0x1202;
 
+  kprintf("task stack top = %x\n", proc->regs.esp);
   switch_to_ready(proc);
   proc_restart();
 

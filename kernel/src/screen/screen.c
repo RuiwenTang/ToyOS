@@ -96,6 +96,10 @@ void screen_print(char *str, uint32_t len, uint32_t color) {
       curr_x = 0;
       curr_y += 10;
     }
+
+    if (curr_y > g_kernel_screen.height) {
+      curr_y = 0;
+    }
   }
 
   g_kernel_screen.pos_x = curr_x;

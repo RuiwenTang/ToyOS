@@ -67,7 +67,7 @@ void page_init_tables(uint32_t total_memory, Framebuffer* info) {
     if (total_memory > 0) {
       g_pd[i].present = 1;
       g_pd[i].rw = 1;
-      g_pd[i].user = 0;
+      g_pd[i].user = 1;
       g_pd[i].ps = 0;
       g_pd[i].unused = 0;
     } else {
@@ -83,7 +83,7 @@ void page_init_tables(uint32_t total_memory, Framebuffer* info) {
 
         current[j].present = 1;
         current[j].rw = 1;
-        current[j].user = 0;
+        current[j].user = 1;
         current[j].unused = 0;
         current[j].address = (addr >> 12);
 
@@ -120,7 +120,7 @@ void page_map_screen(Framebuffer* info) {
     uint32_t dir_index = base / 0x400000;
     g_pd[dir_index].present = 1;
     g_pd[dir_index].rw = 1;
-    g_pd[dir_index].user = 0;
+    g_pd[dir_index].user = 1;
     g_pd[dir_index].unused = 0;
 
     g_pd[dir_index].frame = ((uint32_t)current) >> 12;
@@ -129,7 +129,7 @@ void page_map_screen(Framebuffer* info) {
     for (; j < 1024; j++) {
       current[j].present = 1;
       current[j].rw = 1;
-      current[j].user = 0;
+      current[j].user = 1;
       current[j].unused = 0;
 
       current[j].address = base >> 12;

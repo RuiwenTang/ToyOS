@@ -29,6 +29,14 @@ ESPREG          equ             EFLAGSREG + 4
 SSREG           equ             ESPREG + 4
 P_STACKTOP      equ             SSREG + 4
 
+TSS3_S_SP0 equ 4
+; defined in proc.c
+extern current_proc
+; defined in gdt.c
+extern g_tss
+;defined in boot.asm
+extern stack_top
+
 %macro ISR_NO_ERROR_CODE 1
 global x86_isr%1
 x86_isr%1:
@@ -67,24 +75,27 @@ isr_common:
   mov fs, ax
   mov gs, ax
 
-  push esp              ; pass pointer to stack and pass to c function
+
+  mov eax, esp
+  mov esp, stack_top
+
+  push eax              ; pass pointer to stack and pass to c function
   call c_isr_handler
   add esp, 4
 
-  ; restore data segment
-  pop eax
-  mov ds, ax
-  mov es, ax
-  mov fs, ax
-  mov gs, ax
+global proc_restart
+proc_restart:
+  mov esp, [current_proc]
+  lea eax, [esp + P_STACKTOP]
+  mov dword [g_tss + TSS3_S_SP0], eax
 
   pop gs
   pop fs
   pop es
   pop ds
   popad
-  add esp, 8
-  iret
+  add esp, 8    ; skip interrupt and error code
+  iretd
 
 
 ISR_NO_ERROR_CODE 0
