@@ -87,7 +87,8 @@ global proc_restart
 proc_restart:
   mov esp, [current_proc]
   lea eax, [esp + P_STACKTOP]
-  mov dword [g_tss + TSS3_S_SP0], eax
+  mov ebx, [g_tss]
+  mov dword [ebx + TSS3_S_SP0], eax
 
   pop gs
   pop fs

@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "KernelDebug",
+            "type": "gdb",
+            "request": "attach",
+            "executable": "${workspaceFolder}/build/kernel/kernel.sys",
+            "target": "localhost:1234",
+            "remote": true,
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "gdb"
+        },
+        {
             "name": "mk_floppy",
             "type": "cppdbg",
             "request": "launch",
