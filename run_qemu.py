@@ -1,4 +1,5 @@
 import subprocess
+import sys
 
 if __name__ == '__main__':
     subprocess.call(['echo', 'run qemu'])
@@ -7,5 +8,9 @@ if __name__ == '__main__':
     if ret != 0:
         print("build failed")
         exit()
-    subprocess.call(['qemu-system-i386', '-hda',
-                    'build/tools/disk.img', '-monitor', 'stdio'])
+    if len(sys.argv) >= 2 and sys.argv[1] == '-d':
+        subprocess.call(['qemu-system-i386', '-hda',
+                         'build/tools/disk.img', '-monitor', 'stdio', '-s', '-S'])
+    else:
+        subprocess.call(['qemu-system-i386', '-hda',
+                         'build/tools/disk.img', '-monitor', 'stdio'])
