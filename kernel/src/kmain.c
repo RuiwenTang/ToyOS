@@ -8,6 +8,7 @@
 #include "screen/screen.h"
 #include "x86/gdt.h"
 #include "x86/idt.h"
+#include "x86/io.h"
 #include "x86/irq.h"
 #include "x86/timer.h"
 
@@ -24,8 +25,31 @@ void system_init(BootInfo* info, uint32_t stack) {
 void task_a() {
   kprintf("^");
 
-  while (1)
-    ;
+  uint32_t j = 0;
+  while (1) {
+    kprintf("%d", j);
+    j++;
+    for (uint32_t i = 0; i < 100000000; i++)
+      ;
+  }
+}
+
+void proc_test() {
+  Proc* proc = init_proc();
+
+  proc->regs.cs = USER_CODE_SELECTOR;
+  proc->regs.ds = USER_DATA_SELECTOR;
+  proc->regs.es = USER_DATA_SELECTOR;
+  proc->regs.fs = USER_DATA_SELECTOR;
+  proc->regs.ss = USER_DATA_SELECTOR;
+  proc->regs.gs = USER_DATA_SELECTOR;
+  proc->regs.eip = (uint32_t)task_a;
+  proc->regs.esp = (uint32_t)(temp_stack + 1024);
+  proc->regs.eflags = 0x1202;
+
+  kprintf("task stack top = %x\n", proc->regs.esp);
+  switch_to_ready(proc);
+  proc_restart();
 }
 
 void kernel_main(BootInfo* boot_info, uint32_t stack) {
@@ -43,21 +67,10 @@ void kernel_main(BootInfo* boot_info, uint32_t stack) {
   system_init(boot_info, kernel_stack);
 
   // proc test
-  Proc* proc = init_proc();
+  proc_test();
 
-  proc->regs.cs = USER_CODE_SELECTOR;
-  proc->regs.ds = USER_DATA_SELECTOR;
-  proc->regs.es = USER_DATA_SELECTOR;
-  proc->regs.fs = USER_DATA_SELECTOR;
-  proc->regs.ss = USER_DATA_SELECTOR;
-  proc->regs.gs = USER_DATA_SELECTOR;
-  proc->regs.eip = (uint32_t)task_a;
-  proc->regs.esp = (uint32_t)(temp_stack + 1024);
-  proc->regs.eflags = 0x1202;
-
-  kprintf("task stack top = %x\n", proc->regs.esp);
-  switch_to_ready(proc);
-  proc_restart();
+  // enable int manually
+  // x86_enable_interrupt();
 
   while (1)
     ;

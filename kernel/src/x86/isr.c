@@ -7,6 +7,8 @@
 
 ISRHandler g_isr_handler[256];
 
+int k_reenter = -1;
+
 static const char* const g_Exceptions[] = {
     "Divide by zero error",
     "Debug",

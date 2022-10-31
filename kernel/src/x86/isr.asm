@@ -5,6 +5,7 @@
 ; ss, esp, eflags, cs, eip
 
 extern c_isr_handler
+extern k_reenter
 
 ; ASM const
 P_STACKBASE     equ             0
@@ -75,13 +76,21 @@ isr_common:
   mov fs, ax
   mov gs, ax
 
-
   mov eax, esp
+
+  inc dword [k_reenter]
+  cmp dword [k_reenter], 0
+  je .skip_esp_set
+
   mov esp, stack_top
 
+.skip_esp_set:
   push eax              ; pass pointer to stack and pass to c function
   call c_isr_handler
   add esp, 4
+
+  cmp dword [k_reenter], 0
+  je skip_proc_restore
 
 global proc_restart
 proc_restart:
@@ -89,6 +98,9 @@ proc_restart:
   lea eax, [esp + P_STACKTOP]
   mov ebx, [g_tss]
   mov dword [ebx + TSS3_S_SP0], eax
+
+skip_proc_restore:
+  dec dword [k_reenter]
 
   pop gs
   pop fs
