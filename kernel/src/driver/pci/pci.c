@@ -1,3 +1,4 @@
+#include <driver/pci/ide.h>
 #include <driver/pci/pci.h>
 
 #include "kprintf.h"
@@ -115,4 +116,7 @@ void pci_set_mem_enable(const PCIAddress* addr, int enable) {
   pci_config_write16(addr, offsetof(PCIConfigSpace, command), command);
 }
 
-void pci_init() {}
+void pci_init() {
+  // parallel IDE
+  ide_initialize(0x1F0, 0x3F6, 0x170, 0x376, 0x000);
+}
