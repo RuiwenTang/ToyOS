@@ -63,14 +63,14 @@ bool g_auto_eoi = false;
 
 void i8259_set_mask(uint32_t new_mask) {
   g_pic_mask = new_mask;
-  x86_outb(PIC1_DATA_PORT, g_pic_mask & 0xff);
+  x86_out8(PIC1_DATA_PORT, g_pic_mask & 0xff);
   x86_iowait();
-  x86_outb(PIC2_DATA_PORT, g_pic_mask >> 8);
+  x86_out8(PIC2_DATA_PORT, g_pic_mask >> 8);
   x86_iowait();
 }
 
 uint16_t i8259_get_mask() {
-  return x86_inb(PIC1_DATA_PORT) | (x86_inb(PIC2_DATA_PORT) << 8);
+  return x86_in8(PIC1_DATA_PORT) | (x86_in8(PIC2_DATA_PORT) << 8);
 }
 
 // implement function
@@ -79,21 +79,21 @@ void i8259_configure(uint8_t offset_pic1, uint8_t offset_pic2, bool auto_eoi) {
   i8259_set_mask(0xFFFF);
 
   // init control word 1
-  x86_outb(PIC1_COMMAND_PORT, PIC_ICW1_ICW4 | PIC_ICW1_INITIALIZE);
+  x86_out8(PIC1_COMMAND_PORT, PIC_ICW1_ICW4 | PIC_ICW1_INITIALIZE);
   x86_iowait();
-  x86_outb(PIC2_COMMAND_PORT, PIC_ICW1_ICW4 | PIC_ICW1_INITIALIZE);
+  x86_out8(PIC2_COMMAND_PORT, PIC_ICW1_ICW4 | PIC_ICW1_INITIALIZE);
   x86_iowait();
 
   // init control word 2
-  x86_outb(PIC1_DATA_PORT, offset_pic1);
+  x86_out8(PIC1_DATA_PORT, offset_pic1);
   x86_iowait();
-  x86_outb(PIC2_DATA_PORT, offset_pic2);
+  x86_out8(PIC2_DATA_PORT, offset_pic2);
   x86_iowait();
 
   // init control word 3
-  x86_outb(PIC1_DATA_PORT, 0x4);  // slave at IRQ2 (0000 0100)
+  x86_out8(PIC1_DATA_PORT, 0x4);  // slave at IRQ2 (0000 0100)
   x86_iowait();
-  x86_outb(PIC2_DATA_PORT, 0x2);  // pic2 is cascad identity (0000 0010)
+  x86_out8(PIC2_DATA_PORT, 0x2);  // pic2 is cascad identity (0000 0010)
   x86_iowait();
 
   // init control word 4
@@ -102,9 +102,9 @@ void i8259_configure(uint8_t offset_pic1, uint8_t offset_pic2, bool auto_eoi) {
     icw4 |= PIC_ICW4_AUTO_EOI;
   }
 
-  x86_outb(PIC1_DATA_PORT, icw4);
+  x86_out8(PIC1_DATA_PORT, icw4);
   x86_iowait();
-  x86_outb(PIC2_DATA_PORT, icw4);
+  x86_out8(PIC2_DATA_PORT, icw4);
   x86_iowait();
 
   i8259_set_mask(0xFFFF);
@@ -112,10 +112,10 @@ void i8259_configure(uint8_t offset_pic1, uint8_t offset_pic2, bool auto_eoi) {
 
 void i8259_send_eoi(uint32_t irq) {
   if (irq >= 8) {
-    x86_outb(PIC2_COMMAND_PORT, PIC_CMD_END_OF_INTERRUPT);
+    x86_out8(PIC2_COMMAND_PORT, PIC_CMD_END_OF_INTERRUPT);
   }
 
-  x86_outb(PIC1_COMMAND_PORT, PIC_CMD_END_OF_INTERRUPT);
+  x86_out8(PIC1_COMMAND_PORT, PIC_CMD_END_OF_INTERRUPT);
 }
 
 void i8259_disable() { i8259_set_mask(0xffff); }
@@ -125,21 +125,21 @@ void i8259_mask(uint32_t irq) { i8259_set_mask(g_pic_mask | (1 << irq)); }
 void i8259_unmask(uint32_t irq) { i8259_set_mask(g_pic_mask & ~(1 << irq)); }
 
 uint16_t i8259_read_irq() {
-  x86_outb(PIC1_COMMAND_PORT, PIC_CMD_READ_IRR);
-  x86_outb(PIC2_COMMAND_PORT, PIC_CMD_READ_IRR);
+  x86_out8(PIC1_COMMAND_PORT, PIC_CMD_READ_IRR);
+  x86_out8(PIC2_COMMAND_PORT, PIC_CMD_READ_IRR);
 
-  uint16_t v1 = x86_inb(PIC2_COMMAND_PORT);
-  uint16_t v2 = x86_inb(PIC2_COMMAND_PORT);
+  uint16_t v1 = x86_in8(PIC2_COMMAND_PORT);
+  uint16_t v2 = x86_in8(PIC2_COMMAND_PORT);
 
   return (v1 | (v2 << 8));
 }
 
 uint16_t i8259_read_isr() {
-  x86_outb(PIC1_COMMAND_PORT, PIC_CMD_READ_ISR);
-  x86_outb(PIC2_COMMAND_PORT, PIC_CMD_READ_ISR);
+  x86_out8(PIC1_COMMAND_PORT, PIC_CMD_READ_ISR);
+  x86_out8(PIC2_COMMAND_PORT, PIC_CMD_READ_ISR);
 
-  uint16_t v1 = x86_inb(PIC2_COMMAND_PORT);
-  uint16_t v2 = x86_inb(PIC2_COMMAND_PORT);
+  uint16_t v1 = x86_in8(PIC2_COMMAND_PORT);
+  uint16_t v2 = x86_in8(PIC2_COMMAND_PORT);
 
   return (v1 | (v2 << 8));
 }

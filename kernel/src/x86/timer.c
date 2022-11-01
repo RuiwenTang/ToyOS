@@ -23,7 +23,8 @@ void timer_irq_handler(StackFrame* regs) {
   if (g_timer_count_down == 0) {
     g_timer_count_down = TIME_COUNT_DOWN;
 
-    kprintf("Time count down refresh\n");
+    // print just for debug
+    // kprintf("Time count down refresh\n");
     return;
   }
 
@@ -31,13 +32,13 @@ void timer_irq_handler(StackFrame* regs) {
 }
 
 void timer_init() {
-  x86_outb(TIMER_MODE, RATE_GENERATOR);
+  x86_out8(TIMER_MODE, RATE_GENERATOR);
   x86_iowait();
 
-  x86_outb(TIMER0, (uint8_t)TIMER_FREQ / HZ);
+  x86_out8(TIMER0, (uint8_t)TIMER_FREQ / HZ);
   x86_iowait();
 
-  x86_outb(TIMER0, (uint8_t)((TIMER_FREQ / HZ) >> 8));
+  x86_out8(TIMER0, (uint8_t)((TIMER_FREQ / HZ) >> 8));
   x86_iowait();
 
   irq_register_handler(TIMER_IRQ, &timer_irq_handler);

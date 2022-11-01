@@ -1,0 +1,4 @@
+#ifndef TOY_DRIVER_PCI_IDE_H
+#define TOY_DRIVER_PCI_IDE_H
+
+#endif  // TOY_DRIVER_PCI_IDE_H

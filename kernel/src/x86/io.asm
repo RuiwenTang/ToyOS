@@ -1,22 +1,54 @@
 
 [bits 32]
 
-; void x86_outb(uint16_t port, uint8_t value);
-global x86_outb
-x86_outb:
+; void x86_out8(uint16_t port, uint8_t value);
+global x86_out8
+x86_out8:
   mov dx, [esp + 4]   ; port number
   mov al, [esp + 8]   ; value
 
   out dx, al
   ret
 
-; uint8_t x86_inb(uint16_t port);
+; void x86_out16(uint16_t port, uint16_t value)
+global x86_out16
+x86_out16:
+  mov dx, [esp + 4]   ; port number
+  mov ax, [esp + 8]   ; value
 
-global x86_inb
-x86_inb:
+  out dx, ax
+  ret
+
+; void x86_out32(uint16_t port, uint32_t value)
+global x86_out32
+x86_out32:
+  mov dx, [esp + 4]   ; port number
+  mov eax, [esp + 8]  ; value
+  out dx, eax
+  ret
+
+; uint8_t x86_in8(uint16_t port);
+global x86_in8
+x86_in8:
   mov dx, [esp + 4]
   xor eax, eax
   in al, dx
+  ret
+
+; uint16_t x86_in16(uint16_t port)
+global x86_in16
+x86_in16:
+  mov dx, [esp + 4]
+  xor eax, eax
+  in ax, dx
+  ret
+
+; uint32_t x86_in32(uint16_t port)
+global x86_in32
+x86_in32:
+  mov dx, [esp + 4]
+  xor eax, eax
+  in eax, dx
   ret
 
 ; void x86_enable_interrupt();

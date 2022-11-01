@@ -1,5 +1,6 @@
 
 #include <boot/toy_boot.h>
+#include <driver/pci/pci.h>
 
 #include "kprintf.h"
 #include "mmu/heap.h"
@@ -66,11 +67,13 @@ void kernel_main(BootInfo* boot_info, uint32_t stack) {
 
   system_init(boot_info, kernel_stack);
 
+  pci_init();
+
   // proc test
-  proc_test();
+  // proc_test();
 
   // enable int manually
-  // x86_enable_interrupt();
+  x86_enable_interrupt();
 
   while (1)
     ;
