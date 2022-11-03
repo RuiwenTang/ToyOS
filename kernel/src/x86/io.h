@@ -16,6 +16,9 @@ uint8_t x86_in8(uint16_t port);
 uint16_t x86_in16(uint16_t port);
 uint32_t x86_in32(uint16_t port);
 
+void x86_rep_in16(uint16_t port, uint32_t times, uint32_t addr);
+void x86_rep_out16(uint16_t port, uint32_t times, uint32_t addr);
+
 void x86_enable_interrupt();
 
 void x86_disable_interrupt();

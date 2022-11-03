@@ -116,4 +116,20 @@ uint8_t ide_polling(uint8_t channel, uint32_t advanced_check);
 void ide_initialize(uint32_t bar0, uint32_t bar1, uint32_t bar2, uint32_t bar3,
                     uint32_t bar4);
 
+/**
+ * @brief Read Or Write an ide ata device
+ *
+ * @param direction   0 means reading, 1 means writing
+ * @param drive       the drive number which can be from 0 to 3.
+ * @param lba         the LBA address which allows us to access disks up to 2TB.
+ * @param numsects    the number of sectors to be read, it is a char, as reading
+ *                    more than 256 sector immediately may performance issues.
+ *                    If numsects is 0, the ATA controller will know that we
+ *                    want 256 sectors.
+ * @param buffer      buffer to read or write
+ * @return uint8_t    0 success, other value means failed
+ */
+uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint32_t lba,
+                       uint8_t numsects, uint8_t* buffer);
+
 #endif  // TOY_DRIVER_PCI_IDE_H

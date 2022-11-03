@@ -228,3 +228,130 @@ void ide_initialize(uint32_t bar0, uint32_t bar1, uint32_t bar2, uint32_t bar3,
     }
   }
 }
+
+uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint32_t lba,
+                       uint8_t numsects, uint8_t* buffer) {
+  uint8_t lba_mode /* 0: CHS, 1:LBA28, 2: LBA48 */, dma /* 0: No DMA, 1: DMA */,
+      cmd;
+  uint8_t lba_io[6];
+  uint8_t channel = g_devices[drive].channel;  // read the channel
+  uint32_t slavebit = g_devices[drive].drive;  // read the drive [master/slave]
+  uint32_t bus = g_channels[channel]
+                     .base;  // bus base, like 0x1F0 which is also data port.
+
+  uint32_t words = 256;  // almost every ata drive has a sctor-size of 512 byte.
+  uint16_t cyl, i;
+  uint8_t head, sect, err;
+
+  // no need irq
+  ide_write(channel, ATA_REG_CONTROL, g_channels[channel].nIEN = (0x0 + 0x02));
+
+  // (I) Select one from LBA28, LBA48 or CHS;
+  if (lba >= 0x10000000) {  // Sure Drive should support LBA in this case, or
+                            // you are giving a wrong LBA.
+    // LBA48:
+    lba_mode = 2;
+    lba_io[0] = (lba & 0x000000FF) >> 0;
+    lba_io[1] = (lba & 0x0000FF00) >> 8;
+    lba_io[2] = (lba & 0x00FF0000) >> 16;
+    lba_io[3] = (lba & 0xFF000000) >> 24;
+    lba_io[4] = 0;  // LBA28 is integer, so 32-bits are enough to access 2TB.
+    lba_io[5] = 0;  // LBA28 is integer, so 32-bits are enough to access 2TB.
+    head = 0;       // Lower 4-bits of HDDEVSEL are not used here.
+  } else if (g_devices[drive].capabilities & 0x200) {  // Drive supports LBA?
+    // LBA28:
+    lba_mode = 1;
+    lba_io[0] = (lba & 0x00000FF) >> 0;
+    lba_io[1] = (lba & 0x000FF00) >> 8;
+    lba_io[2] = (lba & 0x0FF0000) >> 16;
+    lba_io[3] = 0;  // These Registers are not used here.
+    lba_io[4] = 0;  // These Registers are not used here.
+    lba_io[5] = 0;  // These Registers are not used here.
+    head = (lba & 0xF000000) >> 24;
+  } else {
+    // CHS:
+    lba_mode = 0;
+    sect = (lba % 63) + 1;
+    cyl = (lba + 1 - sect) / (16 * 63);
+    lba_io[0] = sect;
+    lba_io[1] = (cyl >> 0) & 0xFF;
+    lba_io[2] = (cyl >> 8) & 0xFF;
+    lba_io[3] = 0;
+    lba_io[4] = 0;
+    lba_io[5] = 0;
+    head = (lba + 1 - sect) % (16 * 63) /
+           (63);  // Head number is written to HDDEVSEL lower 4-bits.
+  }
+
+  // (II) See if drive supports DMA or not;
+  dma = 0;  // TODO support
+
+  // (III) Wait if the drive is busy;
+  while (ide_read(channel, ATA_REG_STATUS) & ATA_SR_BSY) {
+    // Wait if busy.
+  }
+
+  // (IV) Select Drive from the controller;
+  if (lba_mode == 0)
+    ide_write(channel, ATA_REG_HDDEVSEL,
+              0xA0 | (slavebit << 4) | head);  // Drive & CHS.
+  else
+    ide_write(channel, ATA_REG_HDDEVSEL,
+              0xE0 | (slavebit << 4) | head);  // Drive & LBA
+
+  // (V) Write Parameters;
+  if (lba_mode == 2) {
+    ide_write(channel, ATA_REG_SECCOUNT1, 0);
+    ide_write(channel, ATA_REG_LBA3, lba_io[3]);
+    ide_write(channel, ATA_REG_LBA4, lba_io[4]);
+    ide_write(channel, ATA_REG_LBA5, lba_io[5]);
+  }
+  ide_write(channel, ATA_REG_SECCOUNT0, numsects);
+  ide_write(channel, ATA_REG_LBA0, lba_io[0]);
+  ide_write(channel, ATA_REG_LBA1, lba_io[1]);
+  ide_write(channel, ATA_REG_LBA2, lba_io[2]);
+
+  if (lba_mode == 0 && dma == 0 && direction == 0) cmd = ATA_CMD_READ_PIO;
+  if (lba_mode == 1 && dma == 0 && direction == 0) cmd = ATA_CMD_READ_PIO;
+  if (lba_mode == 2 && dma == 0 && direction == 0) cmd = ATA_CMD_READ_PIO_EXT;
+  if (lba_mode == 0 && dma == 1 && direction == 0) cmd = ATA_CMD_READ_DMA;
+  if (lba_mode == 1 && dma == 1 && direction == 0) cmd = ATA_CMD_READ_DMA;
+  if (lba_mode == 2 && dma == 1 && direction == 0) cmd = ATA_CMD_READ_DMA_EXT;
+  if (lba_mode == 0 && dma == 0 && direction == 1) cmd = ATA_CMD_WRITE_PIO;
+  if (lba_mode == 1 && dma == 0 && direction == 1) cmd = ATA_CMD_WRITE_PIO;
+  if (lba_mode == 2 && dma == 0 && direction == 1) cmd = ATA_CMD_WRITE_PIO_EXT;
+  if (lba_mode == 0 && dma == 1 && direction == 1) cmd = ATA_CMD_WRITE_DMA;
+  if (lba_mode == 1 && dma == 1 && direction == 1) cmd = ATA_CMD_WRITE_DMA;
+  if (lba_mode == 2 && dma == 1 && direction == 1) cmd = ATA_CMD_WRITE_DMA_EXT;
+  ide_write(channel, ATA_REG_COMMAND, cmd);  // Send the Command.
+
+  if (dma)
+    if (direction == 0)
+      ;
+    // DMA Read.
+    else
+      ;
+  // DMA Write.
+  else if (direction == 0)
+    // PIO Read.
+    for (i = 0; i < numsects; i++) {
+      if ((err = ide_polling(channel, 1)))
+        return err;  // Polling, set error and exit if there is.
+      x86_rep_in16(bus, words, (uint32_t)buffer);
+      buffer += (words * 2);
+    }
+  else {
+    // PIO Write.
+    for (i = 0; i < numsects; i++) {
+      ide_polling(channel, 0);  // Polling.
+      x86_rep_out16(bus, words, (uint32_t)buffer);
+      buffer += (words * 2);
+    }
+    ide_write(channel, ATA_REG_COMMAND,
+              (char[]){ATA_CMD_CACHE_FLUSH, ATA_CMD_CACHE_FLUSH,
+                       ATA_CMD_CACHE_FLUSH_EXT}[lba_mode]);
+    ide_polling(channel, 0);  // Polling.
+  }
+
+  return 0;  // Easy, isn't it?
+}

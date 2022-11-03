@@ -1,5 +1,6 @@
 
 #include <boot/toy_boot.h>
+#include <driver/pci/ide.h>
 #include <driver/pci/pci.h>
 
 #include "kprintf.h"
@@ -74,6 +75,14 @@ void kernel_main(BootInfo* boot_info, uint32_t stack) {
 
   // enable int manually
   x86_enable_interrupt();
+
+  uint8_t* sector_buffer = (uint8_t*)kmalloc(512);
+
+  ide_ata_access(0, 0, 0, 1, sector_buffer);
+
+  uint32_t* n_sectors = (uint32_t*)(sector_buffer + 446 + 12);
+
+  kprintf("first MBR has %d sectors \n", *n_sectors);
 
   while (1)
     ;

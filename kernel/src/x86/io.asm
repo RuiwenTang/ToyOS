@@ -51,6 +51,45 @@ x86_in32:
   in eax, dx
   ret
 
+;void x86_rep_in16(uint16_t port, uint32_t times, uint32_t addr)
+global x86_rep_in16
+x86_rep_in16:
+  push edx
+  push ecx
+  push edi
+
+  xor edx, edx
+  mov dx, [esp + 16]
+  mov ecx, [esp + 20]
+  mov edi, [esp + 24]
+
+  rep insw
+  
+  pop edi
+  pop ecx
+  pop edx
+
+  ret
+
+; void x86_rep_out16(uint16_t port, uint32_t times, uint32_t addr)
+global x86_rep_out16
+x86_rep_out16:
+push edx
+  push ecx
+  push edi
+
+  xor edx, edx
+  mov dx, [esp + 16]
+  mov ecx, [esp + 20]
+  mov edi, [esp + 24]
+
+  rep outsw
+  
+  pop edi
+  pop ecx
+  pop edx
+  rep
+
 ; void x86_enable_interrupt();
 global x86_enable_interrupt
 x86_enable_interrupt:
