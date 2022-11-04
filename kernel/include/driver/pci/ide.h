@@ -132,4 +132,7 @@ void ide_initialize(uint32_t bar0, uint32_t bar1, uint32_t bar2, uint32_t bar3,
 uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint32_t lba,
                        uint8_t numsects, uint8_t* buffer);
 
+// obtain all ide devices
+IDEDevice* ide_get_devices();
+
 #endif  // TOY_DRIVER_PCI_IDE_H

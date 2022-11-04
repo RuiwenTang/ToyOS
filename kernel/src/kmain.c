@@ -2,6 +2,7 @@
 #include <boot/toy_boot.h>
 #include <driver/pci/ide.h>
 #include <driver/pci/pci.h>
+#include <ff.h>
 
 #include "kprintf.h"
 #include "mmu/heap.h"
@@ -78,11 +79,19 @@ void kernel_main(BootInfo* boot_info, uint32_t stack) {
 
   uint8_t* sector_buffer = (uint8_t*)kmalloc(512);
 
-  ide_ata_access(0, 0, 0, 1, sector_buffer);
+  FATFS fs;
+  FRESULT res;
+  FIL fil;
 
-  uint32_t* n_sectors = (uint32_t*)(sector_buffer + 446 + 12);
+  res = f_mount(&fs, "", 1);
+  if (res != FR_OK) {
+    kprintf("fat mount failed\n");
+  }
 
-  kprintf("first MBR has %d sectors \n", *n_sectors);
+  res = f_open(&fil, "newfile.txt", FA_READ);
+  if (res != FR_OK) {
+    kprintf("fat open file failed\n");
+  }
 
   while (1)
     ;

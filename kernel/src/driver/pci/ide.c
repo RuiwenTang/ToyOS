@@ -355,3 +355,5 @@ uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint32_t lba,
 
   return 0;  // Easy, isn't it?
 }
+
+IDEDevice* ide_get_devices() { return g_devices; }

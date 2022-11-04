@@ -20,6 +20,7 @@ kernel_src = [
   'klibc/string.h',
   'src/driver/pci/ide.c',
   'src/driver/pci/pci.c',
+  'src/fs/fatfs_backend.c',
   'src/kmain.c',
   'src/kprintf.c',
   'src/kprintf.h',
@@ -80,7 +81,7 @@ kernel_sys = executable(
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
     cpp_args: kernel_cpp_args,
-    dependencies: [toy_boot, umm_malloc],
+    dependencies: [toy_boot, umm_malloc, fatfs_dep],
 )
 
 gtest = subproject('gtest').get_variable('gtest_dep')
