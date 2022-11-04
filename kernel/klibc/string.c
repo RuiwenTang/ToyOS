@@ -70,7 +70,7 @@ char* strcat(char* s1, const char* s2) {
 }
 
 char* strchr(const char* s, const int c) {
-  while (*s != '0' && *s != (char)c) {
+  while (*s != '\0' && *s != (char)c) {
     s++;
   }
 

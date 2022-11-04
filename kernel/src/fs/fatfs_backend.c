@@ -12,6 +12,7 @@ DSTATUS RAM_disk_initialize() {
     IDEDevice *device = ide_devices + i;
     if (device->reserved) {
       m_devices = device;
+      m_devices_index = i;
       return 0;
     }
   }
