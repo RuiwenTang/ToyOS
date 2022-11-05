@@ -1,4 +1,5 @@
 
+#include <boot/multiboot.h>
 #include <boot/toy_boot.h>
 #include <driver/pci/ide.h>
 #include <driver/pci/pci.h>
@@ -55,44 +56,38 @@ void proc_test() {
   proc_restart();
 }
 
-void kernel_main(BootInfo* boot_info, uint32_t stack) {
-  screen_init(&boot_info->frame_buffer);
-  screen_set_color(SCREEN_COLOR_WHITE);
-  screen_clear();
-
-  kprintf("Now kernel is in charge and never go back to real mode!!\n");
-
-  kprintf("Screen addr is :%x | kernel stack: %x\n",
-          boot_info->frame_buffer.addr, stack - 20);
-
-  uint32_t kernel_stack = stack - 4 * 5;
-
-  system_init(boot_info, kernel_stack);
-
-  pci_init();
-
-  // proc test
-  // proc_test();
-
-  // enable int manually
-  x86_enable_interrupt();
-
-  uint8_t* sector_buffer = (uint8_t*)kmalloc(512);
-
-  FATFS fs;
-  FRESULT res;
-  FIL fil;
-
-  res = f_mount(&fs, "", 1);
-  if (res != FR_OK) {
-    kprintf("fat mount failed\n");
+uint32_t kernel_main(uint32_t eax, uint32_t ebx) {
+  if (eax != 0x2BADB002) {
+    // eax must be this magic number.
+    // other value means boot failed
+    return 0x1111;
   }
 
-  res = f_open(&fil, "newfile.txt", FA_READ);
-  if (res != FR_OK) {
-    kprintf("fat open file failed\n");
+  multiboot_info_t* mb_info = (multiboot_info_t*)ebx;
+
+  Framebuffer fb_info;
+  uint32_t fb_found = 0;
+
+  if (mb_info->framebuffer_type == MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
+    fb_found = 1;
+    fb_info.addr = mb_info->framebuffer_addr;
+    fb_info.width = mb_info->framebuffer_width;
+    fb_info.height = mb_info->framebuffer_height;
+    fb_info.pitch = mb_info->framebuffer_pitch;
+    fb_info.bpp = mb_info->framebuffer_bpp / 8;
   }
+
+  if (fb_found == 0) {
+    // NO fb found
+    return 0x2222;
+  }
+
+  screen_init(&fb_info);
+
+  kprintf("kernel begins... \n");
 
   while (1)
     ;
+
+  return 0;
 }

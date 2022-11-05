@@ -4,7 +4,7 @@ import sys
 if __name__ == '__main__':
     subprocess.call(['echo', 'run qemu'])
     ret = subprocess.call(
-        ['meson', 'compile', '-C', 'build', 'tools/gen_disk'])
+        ['meson', 'compile', '-C', 'build', 'tools/install_limine'])
     if ret != 0:
         print("build failed")
         exit()

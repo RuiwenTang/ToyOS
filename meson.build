@@ -11,6 +11,7 @@ nasm_c = generator(nasm,
     '-o', '@OUTPUT@'])
 
 subdir('common/fatfs')
+subdir('common/limine')
 subdir('bootloader')
 subdir('kernel')
 subdir('tools')

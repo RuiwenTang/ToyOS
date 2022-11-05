@@ -8,7 +8,7 @@
 
 #include "diskio.h"
 
-#define SECTOR_COUNT 0x8000
+#define SECTOR_COUNT 0x80000
 
 struct RamFloppy {
   std::vector<BYTE> disk;
@@ -111,7 +111,9 @@ int main(int argc, const char **argv) {
     res = f_close(&fil);
   }
 
-  std::cout << "stage2 file: " << argv[2] << std::endl;
+  res = f_mkdir("boot");
+
+  std::cout << "limine stage2 file: " << argv[2] << std::endl;
 
   {
     std::ifstream stage2_stream(argv[2], std::ios::in | std::ios::binary);
@@ -120,28 +122,60 @@ int main(int argc, const char **argv) {
         (std::istreambuf_iterator<char>(stage2_stream)),
         std::istreambuf_iterator<char>()};
 
-    std::cout << "size of stage2 file: " << stage2_bin.size() << std::endl;
+    std::cout << "size of limine stage2 file: " << stage2_bin.size()
+              << std::endl;
 
-    std::memcpy(g_floppy->disk.data() + 512, stage2_bin.data(),
-                stage2_bin.size());
+    res = f_open(&fil, "boot/limine.sys", FA_WRITE | FA_CREATE_ALWAYS);
 
-    int stage2_size = stage2_bin.size();
-    int stage2_sector_count = 1 + stage2_size / 512;
+    if (res != FR_OK) {
+      std::cerr << "failed create boot/limine.sys err: " << res << std::endl;
+      return -1;
+    }
 
-    auto *size_p = reinterpret_cast<int *>(g_floppy->disk.data() + 0x1A4);
-    *size_p = stage2_sector_count;
+    res = f_write(&fil, stage2_bin.data(), stage2_bin.size(), &bw);
+
+    if (res != FR_OK) {
+      std::cerr << "failed write to boot/limine.sys err: " << res << std::endl;
+      return -1;
+    }
+
+    res = f_close(&fil);
   }
 
-  std::cout << "kernel file:" << argv[3] << std::endl;
+  std::cout << "limine.cfg" << argv[3] << std::endl;
   {
-    std::ifstream kernel_stream(argv[3], std::ios::in | std::ios::binary);
+    std::ifstream limine_cfg_stream(argv[3], std::ios::in | std::ios::binary);
+
+    std::vector<BYTE> limine_cfg_bin{
+        (std::istreambuf_iterator<char>(limine_cfg_stream)),
+        std::istreambuf_iterator<char>()};
+
+    std::cout << "size of limine.cfg file: " << limine_cfg_bin.size()
+              << std::endl;
+
+    res = f_open(&fil, "boot/limine.cfg", FA_WRITE | FA_CREATE_ALWAYS);
+
+    if (res != FR_OK) {
+      return -1;
+    }
+
+    res = f_write(&fil, limine_cfg_bin.data(), limine_cfg_bin.size(), &bw);
+
+    if (res != FR_OK) {
+      return -1;
+    }
+
+    f_close(&fil);
+  }
+
+  std::cout << "kernel file:" << argv[4] << std::endl;
+  {
+    std::ifstream kernel_stream(argv[4], std::ios::in | std::ios::binary);
     std::vector<BYTE> kernel_bin{
         (std::istreambuf_iterator<char>(kernel_stream)),
         std::istreambuf_iterator<char>()};
 
     std::cout << "size of kernel file: " << kernel_bin.size() << std::endl;
-
-    res = f_mkdir("boot");
 
     res = f_open(&fil, "boot/kernel.sys", FA_WRITE | FA_CREATE_ALWAYS);
 

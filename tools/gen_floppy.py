@@ -6,7 +6,8 @@ if __name__ == '__main__':
     print(sys.argv)
     subprocess.call(['echo', 'run gen_floppy'])
     subprocess.call([sys.argv[1], sys.argv[len(sys.argv) - 1],
-                    sys.argv[3], sys.argv[4]],)
-    subprocess.call(['dd', 'if=%s' % sys.argv[2], 'of=%s' %
-                    sys.argv[len(sys.argv) - 1], 'bs=440', 'count=1', 'conv=notrunc'])
+                    sys.argv[2],  # limine.sys
+                    sys.argv[3],  # limine.cfg
+                    sys.argv[4]],  # kernel.sys
+                    )
     pass
