@@ -5,6 +5,7 @@
 
 #include "kprintf.h"
 #include "mmu/heap.h"
+#include "mmu/palloc.h"
 #include "screen/screen.h"
 
 extern const void kernel_start;
@@ -51,8 +52,8 @@ void page_init(multiboot_info_t* info) {
   page_enable();
 
   uint32_t kernel_heap = (uint32_t)g_page_table_tail;
-  // five page for kernel heap usage
-  uint32_t kernel_size = 0x1000 * 5;
+  // 10 page for kernel heap usage
+  uint32_t kernel_size = 0x1000 * 10;
 
   heap_init((void*)kernel_heap, kernel_size);
 
@@ -60,6 +61,8 @@ void page_init(multiboot_info_t* info) {
 
   uint32_t free_space = kernel_heap + kernel_size;
   kprintf("FreeMemory begin at %x \n", free_space);
+
+  palloc_init(free_space, total_memory);
 }
 
 void page_init_tables(uint32_t total_memory, multiboot_info_t* info) {
