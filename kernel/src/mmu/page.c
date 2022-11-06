@@ -15,18 +15,21 @@ PageDirectory g_pd[1024] __attribute__((aligned(4096)));
 Page* g_page_table_head = NULL;
 Page* g_page_table_tail = NULL;
 
-static void page_init_tables(uint32_t total_memory, Framebuffer* info);
+static void page_init_tables(uint32_t total_memory, multiboot_info_t* info);
 
-static void page_map_screen(Framebuffer* info);
+static void page_map_screen(multiboot_info_t* info);
 
-void page_init(BootInfo* info) {
+void page_init(multiboot_info_t* info) {
   g_page_table_head = (Page*)((((uint32_t)&kernel_end) + 0xfff) & 0xFFFFF000);
   uint32_t total_memory = 0;
-  for (uint32_t i = 0; i < info->memory_info_count; i++) {
+  uint32_t mmap_count = info->mmap_length / sizeof(struct multiboot_mmap_entry);
+  struct multiboot_mmap_entry* mmap_ptr =
+      (struct multiboot_mmap_entry*)info->mmap_addr;
+  for (uint32_t i = 0; i < mmap_count; i++) {
     kprintf("MemoryRegion: base: %x | length %x | type: %d\n",
-            (uint32_t)info->memory_info[i].base,
-            (uint32_t)info->memory_info[i].length, info->memory_info[i].type);
-    total_memory += info->memory_info[i].length;
+            (uint32_t)mmap_ptr->addr, (uint32_t)mmap_ptr->len, mmap_ptr->type);
+    total_memory += mmap_ptr->len;
+    mmap_ptr++;
   }
 
   // align total memory by 4MB
@@ -41,7 +44,7 @@ void page_init(BootInfo* info) {
   kprintf("g_pd at %x | first page_table at %x \n", (uint32_t)g_pd,
           (uint32_t)g_page_table_head);
 
-  page_init_tables(total_memory, &info->frame_buffer);
+  page_init_tables(total_memory, info);
 
   page_load_directory(g_pd);
 
@@ -59,7 +62,7 @@ void page_init(BootInfo* info) {
   kprintf("FreeMemory begin at %x \n", free_space);
 }
 
-void page_init_tables(uint32_t total_memory, Framebuffer* info) {
+void page_init_tables(uint32_t total_memory, multiboot_info_t* info) {
   // 1 : 1 map in kernel
   Page* current = NULL;
   uint32_t i = 0;
@@ -100,15 +103,15 @@ void page_init_tables(uint32_t total_memory, Framebuffer* info) {
   page_map_screen(info);
 }
 
-void page_map_screen(Framebuffer* info) {
-  uint32_t total_memory = info->height * info->pitch;
+void page_map_screen(multiboot_info_t* info) {
+  uint32_t total_memory = info->framebuffer_height * info->framebuffer_pitch;
   total_memory += 0xfff;
   total_memory &= 0xfffff000;
 
   uint32_t dir_count = (total_memory + 0x3fffff) / 0x400000;
   uint32_t page_count = (total_memory + 0xfff) / 0x1000;
 
-  uint32_t base = info->addr;
+  uint32_t base = info->framebuffer_addr;
 
   Page* current = g_page_table_tail;
 

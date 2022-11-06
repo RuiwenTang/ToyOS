@@ -24,7 +24,7 @@ void timer_irq_handler(StackFrame* regs) {
     g_timer_count_down = TIME_COUNT_DOWN;
 
     // print just for debug
-    // kprintf("Time count down refresh\n");
+    kprintf("Time count down refresh\n");
     return;
   }
 

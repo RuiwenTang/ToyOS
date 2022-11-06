@@ -1,7 +1,7 @@
 #ifndef TOY_MMU_PAGE_H
 #define TOY_MMU_PAGE_H
 
-#include <boot/toy_boot.h>
+#include <boot/multiboot.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -38,7 +38,7 @@ typedef struct {
   uint32_t address : 20;  // physical address
 } Page;
 
-void page_init(BootInfo* info);
+void page_init(multiboot_info_t* info);
 
 void page_load_directory(void* pdr);
 

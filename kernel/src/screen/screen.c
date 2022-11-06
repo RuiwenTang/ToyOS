@@ -16,17 +16,20 @@ struct KernelScreen {
 
 struct KernelScreen g_kernel_screen;
 
-void screen_init(Framebuffer *fb_info) {
-  g_kernel_screen.addr = fb_info->addr;
-  g_kernel_screen.width = fb_info->width;
-  g_kernel_screen.height = fb_info->height;
-  g_kernel_screen.pitch = fb_info->pitch;
-  g_kernel_screen.bpp = fb_info->bpp;
+void screen_init(multiboot_info_t *mb_info) {
+  g_kernel_screen.addr = mb_info->framebuffer_addr;
+  g_kernel_screen.width = mb_info->framebuffer_width;
+  g_kernel_screen.height = mb_info->framebuffer_height;
+  g_kernel_screen.pitch = mb_info->framebuffer_pitch;
+  g_kernel_screen.bpp = mb_info->framebuffer_bpp / 8;
 
   g_kernel_screen.pos_x = 0;
   g_kernel_screen.pos_y = 0;
 
   g_kernel_screen.color = 0;
+
+  screen_set_color(SCREEN_COLOR_WHITE);
+  screen_clear();
 }
 
 void screen_set_color(uint32_t color) { g_kernel_screen.color = color; }

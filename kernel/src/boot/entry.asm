@@ -30,6 +30,9 @@ start:
   mov esp, stack_top
   push ebx
   push eax
+  mov eax, esp
+  add eax, 8
+  push esp
   call kernel_main
 
   cli

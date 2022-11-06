@@ -1,13 +1,14 @@
 #ifndef KERNEL_SCREEN_SCREEN_H
 #define KERNEL_SCREEN_SCREEN_H
 
-#include <boot/toy_boot.h>
+#include <boot/multiboot.h>
+#include <stdint.h>
 
 #define SCREEN_COLOR_WHITE 0xffffff
 
 #define SCREEN_COLOR_RED 0xff0000
 
-void screen_init(Framebuffer* fb_info);
+void screen_init(multiboot_info_t* mb_info);
 
 void screen_set_color(uint32_t color);
 

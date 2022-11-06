@@ -1,6 +1,5 @@
 
 #include <boot/multiboot.h>
-#include <boot/toy_boot.h>
 #include <driver/pci/ide.h>
 #include <driver/pci/pci.h>
 #include <ff.h>
@@ -18,7 +17,7 @@
 
 uint8_t temp_stack[1024];
 
-void system_init(BootInfo* info, uint32_t stack) {
+void system_init(multiboot_info_t* info, uint32_t stack) {
   gdt_install(stack);
   page_init(info);
   idt_intall();
@@ -56,7 +55,7 @@ void proc_test() {
   proc_restart();
 }
 
-uint32_t kernel_main(uint32_t eax, uint32_t ebx) {
+uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
   if (eax != 0x2BADB002) {
     // eax must be this magic number.
     // other value means boot failed
@@ -65,26 +64,17 @@ uint32_t kernel_main(uint32_t eax, uint32_t ebx) {
 
   multiboot_info_t* mb_info = (multiboot_info_t*)ebx;
 
-  Framebuffer fb_info;
-  uint32_t fb_found = 0;
-
-  if (mb_info->framebuffer_type == MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
-    fb_found = 1;
-    fb_info.addr = mb_info->framebuffer_addr;
-    fb_info.width = mb_info->framebuffer_width;
-    fb_info.height = mb_info->framebuffer_height;
-    fb_info.pitch = mb_info->framebuffer_pitch;
-    fb_info.bpp = mb_info->framebuffer_bpp / 8;
+  if (mb_info->framebuffer_type != MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
+    // no framebuffer video mode
+    return 0x1111;
   }
 
-  if (fb_found == 0) {
-    // NO fb found
-    return 0x2222;
-  }
-
-  screen_init(&fb_info);
-
+  screen_init(mb_info);
   kprintf("kernel begins... \n");
+
+  system_init(mb_info, esp);
+
+  x86_enable_interrupt();
 
   while (1)
     ;
