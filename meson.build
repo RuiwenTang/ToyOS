@@ -14,6 +14,7 @@ subdir('common/fatfs')
 subdir('common/limine')
 subdir('bootloader')
 subdir('kernel')
+subdir('apps')
 subdir('tools')
 
 

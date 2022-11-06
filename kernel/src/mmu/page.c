@@ -62,7 +62,7 @@ void page_init(multiboot_info_t* info) {
   uint32_t free_space = kernel_heap + kernel_size;
   kprintf("FreeMemory begin at %x \n", free_space);
 
-  palloc_init(free_space, total_memory);
+  palloc_init(free_space, total_memory - free_space);
 }
 
 void page_init_tables(uint32_t total_memory, multiboot_info_t* info) {

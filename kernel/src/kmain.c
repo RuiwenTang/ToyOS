@@ -23,6 +23,7 @@ void system_init(multiboot_info_t* info, uint32_t stack) {
   idt_intall();
   irq_install();
   timer_init();
+  pci_init();
 }
 
 void task_a() {
@@ -75,6 +76,24 @@ uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
   system_init(mb_info, esp);
 
   x86_enable_interrupt();
+
+  FATFS* fs = (FATFS*)kmalloc(sizeof(FATFS));
+  FIL* fil = (FIL*)kmalloc(sizeof(FIL));
+  FRESULT res = f_mount(fs, "", 1);
+
+  if (res != FR_OK) {
+    kprintf("kernel failed mount file system \n");
+    return 2;
+  }
+
+  res = f_open(fil, "system/init", FA_READ | FA_OPEN_EXISTING);
+
+  if (res != FR_OK) {
+    kprintf("kernel failed find init executable! \n");
+    return 3;
+  }
+
+  kprintf("init file size: %d \n", f_size(fil));
 
   while (1)
     ;
