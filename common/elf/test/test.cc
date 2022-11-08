@@ -42,6 +42,15 @@ Elf32_File* elf_open_file(const char* path) {
 
   return (Elf32_File*)std_elf;
 }
+
+int elf_close_file(Elf32_File* file) {
+  STD_ELF* std_elf = (STD_ELF*)file;
+  std::fclose(std_elf->raw_file);
+
+  std::free(file);
+
+  return 0;
+}
 }
 
 int main(int argc, const char** argv) {
@@ -64,6 +73,8 @@ int main(int argc, const char** argv) {
   elf_enum_phdr(elf_file, nullptr, &p_hdrs_count);
   p_hdrs.resize(p_hdrs_count);
   elf_enum_phdr(elf_file, p_hdrs.data(), &p_hdrs_count);
+
+  elf_close_file(elf_file);
 
   return 0;
 }

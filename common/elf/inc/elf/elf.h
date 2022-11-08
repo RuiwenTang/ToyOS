@@ -216,6 +216,8 @@ typedef struct Elf32_File {
 // backend implement functions
 Elf32_File* elf_open_file(const char* path);
 
+int elf_close_file(Elf32_File* file);
+
 int elf_check_valid(Elf32_File* file);
 
 int elf_enum_phdr(Elf32_File* file, Elf32_Phdr* headers, uint32_t* count);

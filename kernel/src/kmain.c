@@ -4,6 +4,7 @@
 #include <driver/pci/pci.h>
 #include <ff.h>
 
+#include "elf/elf_loader.h"
 #include "kprintf.h"
 #include "mmu/heap.h"
 #include "mmu/page.h"
@@ -78,7 +79,6 @@ uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
   x86_enable_interrupt();
 
   FATFS* fs = (FATFS*)kmalloc(sizeof(FATFS));
-  FIL* fil = (FIL*)kmalloc(sizeof(FIL));
   FRESULT res = f_mount(fs, "", 1);
 
   if (res != FR_OK) {
@@ -86,14 +86,10 @@ uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
     return 2;
   }
 
-  res = f_open(fil, "system/init", FA_READ | FA_OPEN_EXISTING);
-
-  if (res != FR_OK) {
-    kprintf("kernel failed find init executable! \n");
+  if (load_and_exec("system/init") != 0) {
+    kprintf("Failed start init process\n");
     return 3;
   }
-
-  kprintf("init file size: %d \n", f_size(fil));
 
   while (1)
     ;
