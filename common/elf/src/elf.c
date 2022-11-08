@@ -55,5 +55,15 @@ int elf_enum_phdr(Elf32_File* file, Elf32_Phdr* headers, uint32_t* count) {
     return 1;
   }
 
+  *count = file->header.e_phnum;
+
+  if (headers == NULL) {
+    return 0;
+  }
+
+  file->impl_seek(file, file->header.e_phoff);
+  file->impl_read(file, (char*)headers,
+                  file->header.e_phnum * file->header.e_phentsize);
+
   return 0;
 }

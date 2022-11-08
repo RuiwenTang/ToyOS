@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <vector>
 
 extern "C" {
 
@@ -56,6 +57,13 @@ int main(int argc, const char** argv) {
     std::cerr << "Elf header check failed" << std::endl;
     return -2;
   }
+
+  std::vector<Elf32_Phdr> p_hdrs;
+  uint32_t p_hdrs_count = 0;
+
+  elf_enum_phdr(elf_file, nullptr, &p_hdrs_count);
+  p_hdrs.resize(p_hdrs_count);
+  elf_enum_phdr(elf_file, p_hdrs.data(), &p_hdrs_count);
 
   return 0;
 }
