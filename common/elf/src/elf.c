@@ -1,10 +1,11 @@
 
 #include <elf/elf.h>
+#include <stddef.h>
 
-int elf_check_valid(Elf32_File *file) {
+int elf_check_valid(Elf32_File* file) {
   file->impl_seek(file, 0);
 
-  file->impl_read(file, (char *)&file->header, sizeof(Elf32_Ehdr));
+  file->impl_read(file, (char*)&file->header, sizeof(Elf32_Ehdr));
 
   if (file->header.e_ident[EI_MAG0] != ELFMAG0) {
     // ELF Header EI_MAG0 incorrect
@@ -44,6 +45,14 @@ int elf_check_valid(Elf32_File *file) {
   if (file->header.e_type != ET_EXEC && file->header.e_type != ET_SHARED) {
     // unsupport elf type
     return 8;
+  }
+
+  return 0;
+}
+
+int elf_enum_phdr(Elf32_File* file, Elf32_Phdr* headers, uint32_t* count) {
+  if (file == NULL) {
+    return 1;
   }
 
   return 0;
