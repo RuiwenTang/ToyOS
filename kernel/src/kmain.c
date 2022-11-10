@@ -39,23 +39,23 @@ void task_a() {
   }
 }
 
-void proc_test() {
-  Proc* proc = init_proc();
+// void proc_test() {
+//   Proc* proc = init_proc();
 
-  proc->regs.cs = USER_CODE_SELECTOR;
-  proc->regs.ds = USER_DATA_SELECTOR;
-  proc->regs.es = USER_DATA_SELECTOR;
-  proc->regs.fs = USER_DATA_SELECTOR;
-  proc->regs.ss = USER_DATA_SELECTOR;
-  proc->regs.gs = USER_DATA_SELECTOR;
-  proc->regs.eip = (uint32_t)task_a;
-  proc->regs.esp = (uint32_t)(temp_stack + 1024);
-  proc->regs.eflags = 0x1202;
+//   proc->regs.cs = USER_CODE_SELECTOR;
+//   proc->regs.ds = USER_DATA_SELECTOR;
+//   proc->regs.es = USER_DATA_SELECTOR;
+//   proc->regs.fs = USER_DATA_SELECTOR;
+//   proc->regs.ss = USER_DATA_SELECTOR;
+//   proc->regs.gs = USER_DATA_SELECTOR;
+//   proc->regs.eip = (uint32_t)task_a;
+//   proc->regs.esp = (uint32_t)(temp_stack + 1024);
+//   proc->regs.eflags = 0x1202;
 
-  kprintf("task stack top = %x\n", proc->regs.esp);
-  switch_to_ready(proc);
-  proc_restart();
-}
+//   kprintf("task stack top = %x\n", proc->regs.esp);
+//   switch_to_ready(proc);
+//   proc_restart();
+// }
 
 uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
   if (eax != 0x2BADB002) {

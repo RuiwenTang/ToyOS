@@ -4,6 +4,7 @@
 
 #include "kprintf.h"
 #include "mmu/heap.h"
+#include "proc/proc.h"
 
 #define ELF_DEBUG 1
 
@@ -44,6 +45,8 @@ int load_and_exec(const char* path) {
 #ifdef ELF_DEBUG
   kprintf("found %d p_headers total memsize: %x \n", ph_count, total_size);
 #endif
+
+  Proc* proc = init_proc(total_size);
 
   // clean up
   kfree(p_headers);

@@ -44,6 +44,8 @@ void page_load_directory(void* pdr);
 
 void page_enable();
 
+void page_map_kernel(uint32_t pdt);
+
 #ifdef __cplusplus
 }
 #endif

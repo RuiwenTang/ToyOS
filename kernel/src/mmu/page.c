@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "kprintf.h"
 #include "mmu/heap.h"
@@ -15,6 +16,8 @@ PageDirectory g_pd[1024] __attribute__((aligned(4096)));
 
 Page* g_page_table_head = NULL;
 Page* g_page_table_tail = NULL;
+
+uint32_t g_total_memory = 0;
 
 static void page_init_tables(uint32_t total_memory, multiboot_info_t* info);
 
@@ -36,6 +39,8 @@ void page_init(multiboot_info_t* info) {
   // align total memory by 4MB
   total_memory += 0x003FFFFF;
   total_memory &= (~0x003FFFFF);
+
+  g_total_memory = total_memory;
 
   kprintf("Total memory is %d MB \n", total_memory / (1024 * 1024));
 
@@ -159,3 +164,5 @@ void page_map_screen(multiboot_info_t* info) {
 
   kprintf("page_tail after map screen : %x \n", (uint32_t)g_page_table_tail);
 }
+
+void page_map_kernel(uint32_t pdt) { memcpy((void*)pdt, g_pd, 0x1000); }

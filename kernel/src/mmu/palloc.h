@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+#define SIZE_ALIGN_4K(s) ((s + 0xfff) & 0xFFFFF000)
+
 typedef struct Region {
   uint32_t base;
   uint32_t length;

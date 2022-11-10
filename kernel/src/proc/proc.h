@@ -3,6 +3,13 @@
 
 #include <stdint.h>
 
+typedef struct MemoryRegion {
+  uint32_t base;
+  uint32_t length;
+
+  struct MemoryRegion* next;
+} MemoryRegion;
+
 typedef struct stackframe {
   // pushed by isr handler
   uint32_t gs;
@@ -34,6 +41,10 @@ typedef struct proc {
   int32_t ticks;
   uint32_t pid;
 
+  uint32_t mapd_base;
+  uint32_t mapd_length;
+
+  MemoryRegion* memory;
   struct proc* ready_next;
   struct proc* suspend_next;
 } Proc;
@@ -43,7 +54,9 @@ typedef struct proc {
  *
  * @return Proc* new proc struct
  */
-Proc* init_proc();
+Proc* init_proc(uint32_t init_size);
+
+void proc_add_memory(Proc* proc, uint32_t base, uint32_t length);
 
 /**
  * @brief insert proc into suspend list
@@ -55,5 +68,7 @@ void suspend_proc(Proc* proc);
 void switch_to_ready(Proc* proc);
 
 void proc_restart();
+
+void proc_exit(Proc* proc);
 
 #endif  // TOY_PROC_PROC_H
