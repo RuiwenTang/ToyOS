@@ -9,6 +9,7 @@
 #define PROC_MEMORY_BASE 0x80000000
 // 1 for PTD and 4 for PT init memory is 16MB
 #define PROC_PAGE_MAP_SIZE (0x1000 * 5)
+#define PROC_STACK_SIZE (0x1000 * 2)
 
 Proc* current_proc = NULL;
 Proc* suspend_list = NULL;
@@ -48,6 +49,8 @@ static Proc* insert_into_list(Proc* list, Proc* item, list_get_next,
 #define READY_REMOVE(list, node) \
   remove_from_list(list, node, ready_list_get_next, ready_list_set_next)
 
+static uint32_t proc_calculate_pt(Proc* proc, uint32_t virtual_addr);
+
 Proc* init_proc(uint32_t init_size) {
   init_size = SIZE_ALIGN_4K(init_size);
   Proc* p = (Proc*)kmalloc(sizeof(Proc));
@@ -56,13 +59,29 @@ Proc* init_proc(uint32_t init_size) {
   // page mapping for this proc
   uint32_t proc_ptd = palloc_allocate(PROC_PAGE_MAP_SIZE);
   proc_add_memory(p, proc_ptd, PROC_PAGE_MAP_SIZE);
-  uint32_t proc_pt = proc_ptd + 0x1000;
 
+  p->page_table = proc_ptd;
   p->mapd_base = PROC_MEMORY_BASE;
+  p->mapd_length = init_size;
 
   uint32_t p_addr = palloc_allocate(init_size);
 
   proc_add_memory(p, p_addr, init_size);
+
+  page_map_addr(p->page_table, PROC_PAGE_MAP_SIZE, p_addr, init_size);
+
+  // init 8k for stack
+
+  uint32_t proc_stack_addr = palloc_allocate(0x2000);
+  proc_add_memory(p, proc_stack_addr, PROC_STACK_SIZE);
+
+  page_map_addr(proc_calculate_pt(p, p->mapd_base + p->mapd_length),
+                p->mapd_base + p->mapd_length, proc_stack_addr,
+                PROC_STACK_SIZE);
+
+  p->mapd_length += PROC_STACK_SIZE;
+
+  p->stack_top = p->mapd_length;
 
   return p;
 }
@@ -133,3 +152,19 @@ Proc* insert_into_list(Proc* list, Proc* item, list_get_next get_next,
 
   return item;
 }
+
+
+uint32_t proc_calculate_pt(Proc* proc, uint32_t virtual_addr) {
+  virtual_addr &= 0xfff;
+
+  if (virtual_addr < PROC_MEMORY_BASE) {
+    // some thing is wrong
+    return proc->page_table;
+  }
+
+  uint32_t delta = virtual_addr - PROC_MEMORY_BASE;
+  delta = delta >> 12;
+
+  return proc->page_table + delta * 4;
+}
+

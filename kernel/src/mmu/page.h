@@ -44,7 +44,11 @@ void page_load_directory(void* pdr);
 
 void page_enable();
 
-void page_map_kernel(uint32_t pdt);
+/**
+ * map physical memory address to user space virtual memory address
+ */
+void page_map_addr(uint32_t pt, uint32_t virtual_base, uint32_t phy_base,
+                   uint32_t size);
 
 #ifdef __cplusplus
 }

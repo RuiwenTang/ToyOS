@@ -43,6 +43,9 @@ typedef struct proc {
 
   uint32_t mapd_base;
   uint32_t mapd_length;
+  uint32_t page_table;
+
+  uint32_t stack_top;
 
   MemoryRegion* memory;
   struct proc* ready_next;

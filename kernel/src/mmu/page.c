@@ -9,6 +9,9 @@
 #include "mmu/palloc.h"
 #include "screen/screen.h"
 
+#define PD_SIZE 0x400000
+#define PT_SIZE 0x1000
+
 extern const void kernel_start;
 extern const void kernel_end;
 
@@ -165,4 +168,43 @@ void page_map_screen(multiboot_info_t* info) {
   kprintf("page_tail after map screen : %x \n", (uint32_t)g_page_table_tail);
 }
 
-void page_map_kernel(uint32_t pdt) { memcpy((void*)pdt, g_pd, 0x1000); }
+void page_map_addr(uint32_t pt, uint32_t virtual_base, uint32_t phy_base,
+                   uint32_t size) {
+  Page* pages = (Page*)pt;
+
+  uint32_t pd_count = size / PD_SIZE + 1;
+
+  for (uint32_t i = 0; i < pd_count; i++) {
+    int32_t pd_index = virtual_base / PD_SIZE;
+    uint32_t pt_index = (virtual_base & (PD_SIZE - 1)) / 0x1000;
+
+    if (pt_index == 0) {
+      g_pd[pd_index].present = 1;
+      g_pd[pd_index].user = 1;
+      g_pd[pd_index].rw = 1;
+      g_pd[pd_index].unused = 0;
+      g_pd[pd_index].frame = ((uint32_t)pages) >> 12;
+    }
+
+    for (uint32_t j = pt_index; j < 1024; j++) {
+      pages->present = 1;
+      pages->rw = 1;
+      pages->user = 1;
+      pages->unused = 0;
+      pages->address = phy_base >> 12;
+
+      pages++;
+      virtual_base += PT_SIZE;
+      phy_base += PT_SIZE;
+      size -= PT_SIZE;
+
+      if (size <= 0) {
+        break;
+      }
+    }
+
+    if (size <= 0) {
+      break;
+    }
+  }
+}
