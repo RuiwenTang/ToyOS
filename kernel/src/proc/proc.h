@@ -70,6 +70,11 @@ void suspend_proc(Proc* proc);
 
 void switch_to_ready(Proc* proc);
 
+void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
+                      uint32_t size);
+
+uint32_t proc_phy_address(Proc* proc, uint32_t v_addr);
+
 void proc_restart();
 
 void proc_exit(Proc* proc);

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "mmu/heap.h"
+#include "mmu/page.h"
 #include "mmu/palloc.h"
 
 #define PROC_MEMORY_BASE 0x80000000
@@ -49,8 +50,6 @@ static Proc* insert_into_list(Proc* list, Proc* item, list_get_next,
 #define READY_REMOVE(list, node) \
   remove_from_list(list, node, ready_list_get_next, ready_list_set_next)
 
-static uint32_t proc_calculate_pt(Proc* proc, uint32_t virtual_addr);
-
 Proc* init_proc(uint32_t init_size) {
   init_size = SIZE_ALIGN_4K(init_size);
   Proc* p = (Proc*)kmalloc(sizeof(Proc));
@@ -67,21 +66,17 @@ Proc* init_proc(uint32_t init_size) {
   uint32_t p_addr = palloc_allocate(init_size);
 
   proc_add_memory(p, p_addr, init_size);
-
-  page_map_addr(p->page_table, PROC_PAGE_MAP_SIZE, p_addr, init_size);
-
+  proc_map_address(p, PROC_MEMORY_BASE, p_addr, init_size);
   // init 8k for stack
 
-  uint32_t proc_stack_addr = palloc_allocate(0x2000);
+  uint32_t proc_stack_addr = palloc_allocate(PROC_STACK_SIZE);
   proc_add_memory(p, proc_stack_addr, PROC_STACK_SIZE);
-
-  page_map_addr(proc_calculate_pt(p, p->mapd_base + p->mapd_length),
-                p->mapd_base + p->mapd_length, proc_stack_addr,
-                PROC_STACK_SIZE);
+  proc_map_address(p, p->mapd_base + p->mapd_length, proc_stack_addr,
+                   PROC_STACK_SIZE);
 
   p->mapd_length += PROC_STACK_SIZE;
 
-  p->stack_top = p->mapd_length;
+  p->stack_top = p->mapd_base + p->mapd_length;
 
   return p;
 }
@@ -153,18 +148,40 @@ Proc* insert_into_list(Proc* list, Proc* item, list_get_next get_next,
   return item;
 }
 
-
-uint32_t proc_calculate_pt(Proc* proc, uint32_t virtual_addr) {
-  virtual_addr &= 0xfff;
-
-  if (virtual_addr < PROC_MEMORY_BASE) {
-    // some thing is wrong
-    return proc->page_table;
+void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
+                      uint32_t size) {
+  if (v_addr < PROC_MEMORY_BASE) {
+    return;
   }
 
-  uint32_t delta = virtual_addr - PROC_MEMORY_BASE;
-  delta = delta >> 12;
+  size += 0xFFF;
+  size &= 0xFFFFF000;
 
-  return proc->page_table + delta * 4;
+  uint32_t count = size / 0x1000;
+
+  Page* pt = (Page*)proc->page_table;
+
+  uint32_t first_pt_index = (v_addr - PROC_MEMORY_BASE) / 0x1000;
+  for (uint32_t i = 0; i < count; i++) {
+    pt[first_pt_index + i].present = 1;
+    pt[first_pt_index + i].rw = 1;
+    pt[first_pt_index + i].user = 1;
+    pt[first_pt_index + i].unused = 0;
+    pt[first_pt_index + i].address = p_addr >> 12;
+
+    p_addr += 0x1000;
+  }
 }
 
+uint32_t proc_phy_address(Proc* proc, uint32_t v_addr) {
+  if (v_addr < PROC_MEMORY_BASE) {
+    return 0;
+  }
+  Page* pt = (Page*)proc->page_table;
+  uint32_t pt_index = (v_addr - PROC_MEMORY_BASE) / 0x1000;
+
+  uint32_t p_addr_base = pt[pt_index].address << 12;
+  uint32_t p_addr_inner = v_addr & 0xfff;
+
+  return p_addr_base + p_addr_inner;
+}
