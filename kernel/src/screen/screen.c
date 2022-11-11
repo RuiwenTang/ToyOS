@@ -53,15 +53,20 @@ static void screen_put_pixel(uint32_t color, uint16_t x, uint16_t y) {
 
   uint8_t *pix = line + x * g_kernel_screen.bpp;
 
-  if (g_kernel_screen.bpp != 3) {
+  if (g_kernel_screen.bpp == 4) {
+    pix[0] = color & 0xFF;
+    pix[1] = (color >> 8) & 0xFF;
+    pix[2] = (color >> 16) & 0xFF;
+    pix[3] = 0xFF;
+  } else if (g_kernel_screen.bpp == 3) {
+    pix[0] = color & 0xFF;
+    pix[1] = (color >> 8) & 0xFF;
+    pix[2] = (color >> 16) & 0xFF;
+  } else {
     // FIXME no support for other color space
     for (int32_t i = 0; i < g_kernel_screen.bpp; i++) {
       pix[i] = 0xFF;
     }
-  } else {
-    pix[0] = color & 0xFF;
-    pix[1] = (color >> 8) & 0xFF;
-    pix[2] = (color >> 16) & 0xFF;
   }
 }
 

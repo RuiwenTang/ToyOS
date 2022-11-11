@@ -550,7 +550,7 @@ void idt_init_isr() {
   idt_set_gate(127, x86_isr127, KERNEL_GDT_CODE_SEGMENT,
                IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
   idt_set_gate(128, x86_isr128, KERNEL_GDT_CODE_SEGMENT,
-               IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
+               IDT_FLAG_RING3 | IDT_FLAG_GATE_32BIT_INT);
   idt_set_gate(129, x86_isr129, KERNEL_GDT_CODE_SEGMENT,
                IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
   idt_set_gate(130, x86_isr130, KERNEL_GDT_CODE_SEGMENT,
@@ -811,5 +811,5 @@ void idt_init_isr() {
   }
 
   // disable 0x80 for system call
-  idt_disable_gate(0x80);
+  // idt_disable_gate(0x80);
 }

@@ -12,8 +12,7 @@ static void print_sys_call(StackFrame* frame) {
   // mapping
   char* str = (char*)frame->ebx;
   uint32_t len = strlen(str);
-  //   screen_print(str, len, SCREEN_COLOR_GREEN);
-  kprintf("sys call print \n");
+  screen_print(str, len, SCREEN_COLOR_GREEN);
 }
 
 void kernel_sys_call(StackFrame* frame) {
