@@ -2,7 +2,7 @@
 
 init_bin = executable(
     'init.bin',
-    sources: ['main.c'],
+    sources: ['main.c', nasm_c.process('print.asm')],
     link_args: [
         '-nostdlib',
         '-T', app_link_script

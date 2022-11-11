@@ -37,6 +37,8 @@ kernel_src = [
   'src/proc/proc.h',
   'src/screen/screen.c',
   'src/screen/screen.h',
+  'src/syscall/syscall.c',
+  'src/syscall/syscall.h',
   'src/x86/gdt.c',
   'src/x86/gdt.h',
   'src/x86/idt.c',

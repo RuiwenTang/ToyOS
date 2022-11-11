@@ -10,6 +10,7 @@
 #include "mmu/page.h"
 #include "proc/proc.h"
 #include "screen/screen.h"
+#include "syscall/syscall.h"
 #include "x86/gdt.h"
 #include "x86/idt.h"
 #include "x86/io.h"
@@ -24,6 +25,7 @@ void system_init(multiboot_info_t* info, uint32_t stack) {
   idt_intall();
   irq_install();
   timer_init();
+  sys_call_init();
   pci_init();
 }
 

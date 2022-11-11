@@ -76,7 +76,7 @@ Proc* init_proc(uint32_t init_size) {
 
   p->mapd_length += PROC_STACK_SIZE;
 
-  p->stack_top = p->mapd_base + p->mapd_length;
+  p->stack_top = p->mapd_base + p->mapd_length - 4;
 
   return p;
 }

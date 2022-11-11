@@ -7,6 +7,7 @@
 #define SCREEN_COLOR_WHITE 0xffffff
 
 #define SCREEN_COLOR_RED 0xff0000
+#define SCREEN_COLOR_GREEN 0x00ff00
 
 void screen_init(multiboot_info_t* mb_info);
 
