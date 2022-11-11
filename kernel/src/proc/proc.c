@@ -185,3 +185,15 @@ uint32_t proc_phy_address(Proc* proc, uint32_t v_addr) {
 
   return p_addr_base + p_addr_inner;
 }
+
+// defined in proc.asm
+void proc_restart();
+
+void proc_switch() {
+  if (current_proc == NULL) {
+    return;
+  }
+
+  page_load_proc(current_proc);
+  proc_restart();
+}

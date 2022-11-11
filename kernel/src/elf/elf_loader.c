@@ -84,6 +84,7 @@ int load_and_exec(const char* path) {
   elf_close_file(elf_file);
 
   switch_to_ready(proc);
+  proc_switch();
 
   return 0;
 }

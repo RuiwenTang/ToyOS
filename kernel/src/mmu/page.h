@@ -8,6 +8,9 @@
 extern "C" {
 #endif
 
+// proc struct
+struct proc;
+
 // page table entry
 typedef struct {
   uint32_t present : 1;  // Page present in memory
@@ -43,6 +46,8 @@ void page_init(multiboot_info_t* info);
 void page_load_directory(void* pdr);
 
 void page_enable();
+
+void page_load_proc(struct proc*);
 
 #ifdef __cplusplus
 }

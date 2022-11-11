@@ -8,6 +8,7 @@
 #include "mmu/heap.h"
 #include "mmu/page.h"
 #include "mmu/palloc.h"
+#include "proc/proc.h"
 #include "screen/screen.h"
 
 #define PD_SIZE 0x400000
@@ -167,4 +168,21 @@ void page_map_screen(multiboot_info_t* info) {
   g_page_table_tail = (Page*)current_align;
 
   kprintf("page_tail after map screen : %x \n", (uint32_t)g_page_table_tail);
+}
+
+void page_load_proc(Proc* p) {
+  uint32_t pd_count = (p->mapd_length / PD_SIZE) + 1;
+
+  uint32_t pd_index = p->mapd_base / PD_SIZE;
+
+  uint32_t proc_pt = p->page_table;
+  for (uint32_t i = 0; i < pd_count; i++) {
+    g_pd[pd_index + i].user = 1;
+    g_pd[pd_index + i].rw = 1;
+    g_pd[pd_index + i].present = 1;
+    g_pd[pd_index + i].unused = 0;
+    g_pd[pd_index + i].frame = proc_pt >> 12;
+
+    proc_pt += 0x1000;
+  }
 }

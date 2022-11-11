@@ -75,7 +75,7 @@ void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
 
 uint32_t proc_phy_address(Proc* proc, uint32_t v_addr);
 
-void proc_restart();
+void proc_switch();
 
 void proc_exit(Proc* proc);
 
