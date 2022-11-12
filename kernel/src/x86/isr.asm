@@ -110,12 +110,6 @@ skip_proc_restore:
   add esp, 8    ; skip interrupt and error code
   iretd
 
-global x86_isr128
-x86_isr128:
-  push 0
-  push 0x80
-  jmp isr_common
-
 ISR_NO_ERROR_CODE 0
 ISR_NO_ERROR_CODE 1
 ISR_NO_ERROR_CODE 2
@@ -244,7 +238,7 @@ ISR_NO_ERROR_CODE 124
 ISR_NO_ERROR_CODE 125
 ISR_NO_ERROR_CODE 126
 ISR_NO_ERROR_CODE 127
-; ISR_NO_ERROR_CODE 128
+ISR_NO_ERROR_CODE 128
 ISR_NO_ERROR_CODE 129
 ISR_NO_ERROR_CODE 130
 ISR_NO_ERROR_CODE 131
