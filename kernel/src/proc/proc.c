@@ -99,6 +99,18 @@ void switch_to_ready(Proc* proc) {
 void proc_exit(Proc* proc) {
   suspend_list = SUSPEND_REMOVE(suspend_list, proc);
   current_proc = READY_REMOVE(current_proc, proc);
+
+  // free all allocated page
+  while (proc->memory) {
+    MemoryRegion* region = proc->memory;
+    proc->memory = proc->memory->next;
+
+    palloc_free(region->base, region->length);
+
+    kfree(region);
+  }
+
+  kfree(proc);
 }
 
 void proc_insert_memory_region(Proc* proc, MemoryRegion* region) {
