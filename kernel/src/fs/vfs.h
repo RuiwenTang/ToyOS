@@ -15,8 +15,8 @@ typedef uint32_t (*read_type_t)(struct fs_node *, uint32_t, uint32_t,
                                 uint8_t *);
 typedef uint32_t (*write_type_t)(struct fs_node *, uint32_t, uint32_t,
                                  uint8_t *);
-typedef void (*open_type_t)(struct fs_node *, char *name, uint8_t read,
-                            uint8_t write);
+typedef struct fs_node *(*open_type_t)(struct fs_node *, const char *name,
+                                       uint32_t flag, uint32_t mode);
 typedef void (*close_type_t)(struct fs_node *);
 
 typedef void (*seek_type_t)(struct fs_node *, uint32_t);
@@ -33,7 +33,13 @@ typedef struct fs_node {
   close_type_t f_close;
   seek_type_t f_seek;
 
+  struct fs_node *parent;
+  struct fs_node *children;
+  struct fs_node *child_list_next;
+
 } FS_NODE;
+
+void vfs_init();
 
 FS_NODE *vfs_open(const char *name, uint32_t flags, uint32_t mode);
 

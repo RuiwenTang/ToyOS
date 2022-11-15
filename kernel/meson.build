@@ -24,6 +24,8 @@ kernel_src = [
   'src/elf/elf_loader.c',
   'src/elf/elf_loader.h',
   'src/fs/fatfs_backend.c',
+  'src/fs/mem/mem_fs.c',
+  'src/fs/mem/mem_fs.h',
   'src/fs/vfs.c',
   'src/fs/vfs.h',
   'src/kmain.c',

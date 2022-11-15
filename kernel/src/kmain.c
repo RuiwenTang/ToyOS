@@ -5,6 +5,7 @@
 #include <ff.h>
 
 #include "elf/elf_loader.h"
+#include "fs/vfs.h"
 #include "kprintf.h"
 #include "mmu/heap.h"
 #include "mmu/page.h"
@@ -27,6 +28,8 @@ void system_init(multiboot_info_t* info, uint32_t stack) {
   timer_init();
   sys_call_init();
   pci_init();
+
+  vfs_init();
 }
 
 void task_a() {
