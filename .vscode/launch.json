@@ -48,7 +48,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/common/elf/elf_test",
             "args": [
-                "${workspaceFolder}/build/apps/system_server/init/init.bin"
+                "${workspaceFolder}/build/apps/system_server/init/init.dl"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
