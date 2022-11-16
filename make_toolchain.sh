@@ -23,7 +23,7 @@ fi
 
 if [ -d binutils-2.39 ]
 then
-    cd binutils-2.3.9
+    cd binutils-2.39
     patch -p1 < ../../patchs/binutils-2.93.patch
     cd ../
 fi
