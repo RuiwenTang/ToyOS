@@ -170,6 +170,93 @@ typedef struct {
   uint32_t p_align;
 } Elf32_Phdr;
 
+/**
+ * A file's section header table lets one locate all the file's
+ * sections.  The section header table is an array of Elf32_Shdr or
+ * Elf64_Shdr structures.  The ELF header's e_shoff member gives the
+ * byte offset from the beginning of the file to the section header
+ * table.  e_shnum holds the number of entries the section header
+ * table contains.  e_shentsize holds the size in bytes of each
+ * entry.
+ *
+ */
+typedef struct {
+  // This member specifies the name of the section.  Its value is an index into
+  // the section header string table section, giving the location of a
+  // null-terminated string.
+  uint32_t sh_name;
+  // This member categorizes the section's contents and semantics.
+  uint32_t sh_type;
+  // Sections support one-bit flags that describe miscellaneous attributes.  If
+  // a flag bit is set in sh_flags, the attribute is "on" for the section.
+  // Otherwise, the attribute is "off" or does not apply.  Undefined attributes
+  // are set to zero.
+  uint32_t sh_flags;
+  // If this section appears in the memory image of a process, this member holds
+  // the address at which the section's first byte should reside.  Otherwise,
+  // the member contains zero.
+  Elf32_Addr sh_addr;
+  // This member's value holds the byte offset from the beginning of the file to
+  // the first byte in the section. One section type, SHT_NOBITS, occupies no
+  // space in the file, and its sh_offset member locates the conceptual
+  // placement in the file.
+  Elf32_Off sh_offset;
+  // This member holds the section's size in bytes.  Unless the section type is
+  // SHT_NOBITS, the section occupies sh_size bytes in the file.  A section of
+  // type SHT_NOBITS may have a nonzero size, but it occupies no space in the
+  // file.
+  uint32_t sh_size;
+  // This member holds a section header table index link, whose interpretation
+  // depends on the section type.
+  uint32_t sh_link;
+  // This member holds extra information, whose interpretation depends on the
+  // section type.
+  uint32_t sh_info;
+  uint32_t sh_addralign;
+  // Some sections hold a table of fixed-sized entries, such as a symbol table.
+  // For such a section, this member gives the size in bytes for each entry.
+  // This member contains zero if the section does not hold a table of
+  // fixed-size entries.
+  uint32_t sh_entsize;
+} Elf32_Shdr;
+
+/**
+ * @brief String and symbol tables
+ *
+ * String table sections hold null-terminated character sequences,
+ * commonly called strings.  The object file uses these strings to
+ * represent symbol and section names.  One references a string as
+ * an index into the string table section.  The first byte, which is
+ * index zero, is defined to hold a null byte ('\0').  Similarly, a
+ * string table's last byte is defined to hold a null byte, ensuring
+ * null termination for all strings.
+ *
+ * An object file's symbol table holds information needed to locate
+ * and relocate a program's symbolic definitions and references.  A
+ * symbol table index is a subscript into this array.
+ */
+typedef struct {
+  /**
+   * This member holds an index into the object file's symbol
+   * string table, which holds character representations of the
+   * symbol names.  If the value is nonzero, it represents a
+   * string table index that gives the symbol name.  Otherwise,
+   * the symbol has no name.
+   *
+   */
+  uint32_t st_name;
+  // This member gives the value of the associated symbol.
+  Elf32_Addr st_value;
+  // Many symbols have associated sizes.  This member holds zero if the symbol
+  // has no size or an unknown size.
+  uint32_t st_size;
+  // This member specifies the symbol's type and binding attributes:
+  unsigned char st_info;
+  // This member defines the symbol visibility.
+  unsigned char st_other;
+  uint16_t st_shndx;
+} Elf32_Sym;
+
 #define ELFMAG0 0x7F  // e_ident[EI_MAG0]
 #define ELFMAG1 'E'   // e_ident[EI_MAG1]
 #define ELFMAG2 'L'   // e_ident[EI_MAG2]
@@ -201,6 +288,46 @@ typedef struct {
 #define PT_GNU_RELRO (PT_LOOS + 0x474e552)
 #define PT_GNU_PROPERTY (PT_LOOS + 0x474e553)
 
+/* sh_type */
+#define SHT_NULL 0
+#define SHT_PROGBITS 1
+#define SHT_SYMTAB 2
+#define SHT_STRTAB 3
+#define SHT_RELA 4
+#define SHT_HASH 5
+#define SHT_DYNAMIC 6
+#define SHT_NOTE 7
+#define SHT_NOBITS 8
+#define SHT_REL 9
+#define SHT_SHLIB 10
+#define SHT_DYNSYM 11
+#define SHT_NUM 12
+#define SHT_LOPROC 0x70000000
+#define SHT_HIPROC 0x7fffffff
+#define SHT_LOUSER 0x80000000
+#define SHT_HIUSER 0xffffffff
+
+/* sh_flags */
+#define SHF_WRITE 0x1
+#define SHF_ALLOC 0x2
+#define SHF_EXECINSTR 0x4
+#define SHF_RELA_LIVEPATCH 0x00100000
+#define SHF_RO_AFTER_INIT 0x00200000
+#define SHF_MASKPROC 0xf0000000
+
+/* This info is needed when parsing the symbol table */
+#define STB_LOCAL 0
+#define STB_GLOBAL 1
+#define STB_WEAK 2
+
+#define STT_NOTYPE 0
+#define STT_OBJECT 1
+#define STT_FUNC 2
+#define STT_SECTION 3
+#define STT_FILE 4
+#define STT_COMMON 5
+#define STT_TLS 6
+
 // abstract elf file reading and writing
 struct Elf32_File;
 
@@ -221,6 +348,8 @@ int elf_close_file(Elf32_File* file);
 int elf_check_valid(Elf32_File* file);
 
 int elf_enum_phdr(Elf32_File* file, Elf32_Phdr* headers, uint32_t* count);
+
+int elf_enum_shdr(Elf32_File* file, Elf32_Shdr* sections, uint32_t* count);
 
 #ifdef __cplusplus
 }

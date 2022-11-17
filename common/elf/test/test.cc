@@ -53,6 +53,16 @@ int elf_close_file(Elf32_File* file) {
 }
 }
 
+int32_t find_global_symbol_table(std::vector<Elf32_Shdr> const& headers) {
+  for (int32_t i = 0; i < headers.size(); i++) {
+    if (headers[i].sh_type == SHT_DYNSYM) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
 int main(int argc, const char** argv) {
   Elf32_File* elf_file = elf_open_file(argv[1]);
 
@@ -73,6 +83,23 @@ int main(int argc, const char** argv) {
   elf_enum_phdr(elf_file, nullptr, &p_hdrs_count);
   p_hdrs.resize(p_hdrs_count);
   elf_enum_phdr(elf_file, p_hdrs.data(), &p_hdrs_count);
+
+  std::vector<Elf32_Shdr> s_hdrs;
+  uint32_t s_shrs_count = 0;
+
+  elf_enum_shdr(elf_file, nullptr, &s_shrs_count);
+  s_hdrs.resize(s_shrs_count);
+  elf_enum_shdr(elf_file, s_hdrs.data(), &s_shrs_count);
+
+  // find dynmaic symbol table
+  int32_t dym_index = find_global_symbol_table(s_hdrs);
+  if (dym_index >= 0) {
+    Elf32_Sym symb;
+    elf_file->impl_seek(elf_file, s_hdrs[dym_index].sh_offset);
+    elf_file->impl_read(elf_file, (char*)&symb, sizeof(Elf32_Sym));
+
+    std::cout << "type = " << symb.st_name << std::endl;
+  }
 
   elf_close_file(elf_file);
 

@@ -67,3 +67,21 @@ int elf_enum_phdr(Elf32_File* file, Elf32_Phdr* headers, uint32_t* count) {
 
   return 0;
 }
+
+int elf_enum_shdr(Elf32_File* file, Elf32_Shdr* sections, uint32_t* count) {
+  if (file == NULL) {
+    return 1;
+  }
+
+  *count = file->header.e_shnum;
+
+  if (sections == NULL) {
+    return 0;
+  }
+
+  file->impl_seek(file, file->header.e_shoff);
+  file->impl_read(file, (char*)sections,
+                  file->header.e_shnum * file->header.e_shentsize);
+
+  return 0;
+}
