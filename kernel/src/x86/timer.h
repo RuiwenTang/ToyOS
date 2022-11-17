@@ -3,6 +3,14 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void timer_init();
 
-#endif // TOY_X86_TIMER_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif  // TOY_X86_TIMER_H

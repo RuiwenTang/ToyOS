@@ -44,7 +44,7 @@ void task_a() {
   }
 }
 
-uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
+extern "C" uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
   if (eax != 0x2BADB002) {
     // eax must be this magic number.
     // other value means boot failed

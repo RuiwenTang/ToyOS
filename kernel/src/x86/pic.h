@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
   const char* name;
   bool (*probe)();
@@ -15,5 +19,9 @@ typedef struct {
 } PICDriver;
 
 PICDriver* init_pic_driver();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // TOY_X86_PIC_H

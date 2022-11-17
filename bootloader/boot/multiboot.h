@@ -23,6 +23,10 @@
 #ifndef MULTIBOOT_HEADER
 #define MULTIBOOT_HEADER 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* How many bytes from the start of the file we search for the header. */
 #define MULTIBOOT_SEARCH 8192
 #define MULTIBOOT_HEADER_ALIGN 4
@@ -260,5 +264,9 @@ struct multiboot_apm_info {
 };
 
 #endif /* ! ASM_FILE */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ! MULTIBOOT_HEADER */

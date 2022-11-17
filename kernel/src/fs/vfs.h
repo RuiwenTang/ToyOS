@@ -4,6 +4,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PATH_SEPARATOR '/'
 #define PATH_SEPARATOR_STRING "/"
 #define PATH_UP ".."
@@ -51,5 +55,9 @@ FS_NODE *vfs_write(FS_NODE *node, uint32_t offset, uint32_t size,
                    uint8_t *buff);
 
 FS_NODE *vfs_seek(FS_NODE *node, uint32_t offset);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // TOY_KERNEL_VFS_H

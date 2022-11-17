@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // status
 #define ATA_SR_BSY 0x80   // Busy
 #define ATA_SR_DRDY 0x40  // Drive ready
@@ -134,5 +138,9 @@ uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint32_t lba,
 
 // obtain all ide devices
 IDEDevice* ide_get_devices();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // TOY_DRIVER_PCI_IDE_H

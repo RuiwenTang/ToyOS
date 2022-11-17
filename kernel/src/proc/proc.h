@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct MemoryRegion {
   uint32_t base;
   uint32_t length;
@@ -78,5 +82,9 @@ uint32_t proc_phy_address(Proc* proc, uint32_t v_addr);
 void proc_switch();
 
 void proc_exit(Proc* proc);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // TOY_PROC_PROC_H
