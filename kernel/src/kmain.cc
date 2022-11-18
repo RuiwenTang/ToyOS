@@ -4,7 +4,7 @@
 #include <driver/pci/pci.h>
 #include <ff.h>
 
-#include "elf/elf_loader.h"
+#include "elf/elf_loader.hpp"
 #include "fs/vfs.h"
 #include "kprintf.h"
 #include "mmu/heap.h"
