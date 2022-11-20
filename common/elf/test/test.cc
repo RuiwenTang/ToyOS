@@ -63,6 +63,17 @@ int32_t find_global_symbol_table(std::vector<Elf32_Shdr> const& headers) {
   return -1;
 }
 
+void check_dynamic_table(Elf32_File* elf_file,
+                         std::vector<Elf32_Phdr> const& headers) {
+  for (auto const& p_head : headers) {
+    if (p_head.p_type == PT_DYNAMIC) {
+      std::cout << "dynamic header with : ["
+                << p_head.p_filesz / sizeof(Elf32_Dyn) << "] table count"
+                << std::endl;
+    }
+  }
+}
+
 int main(int argc, const char** argv) {
   Elf32_File* elf_file = elf_open_file(argv[1]);
 
@@ -91,15 +102,7 @@ int main(int argc, const char** argv) {
   s_hdrs.resize(s_shrs_count);
   elf_enum_shdr(elf_file, s_hdrs.data(), &s_shrs_count);
 
-  // find dynmaic symbol table
-  int32_t dym_index = find_global_symbol_table(s_hdrs);
-  if (dym_index >= 0) {
-    Elf32_Sym symb;
-    elf_file->impl_seek(elf_file, s_hdrs[dym_index].sh_offset);
-    elf_file->impl_read(elf_file, (char*)&symb, sizeof(Elf32_Sym));
-
-    std::cout << "type = " << symb.st_name << std::endl;
-  }
+  check_dynamic_table(elf_file, p_hdrs);
 
   elf_close_file(elf_file);
 
