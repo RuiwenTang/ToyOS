@@ -59,6 +59,8 @@ struct MemoryBlock {
 };
 
 std::vector<MemoryBlock> g_memory;
+uint32_t g_symbol_table = 0;
+uint32_t g_string_table = 0;
 
 const char* get_p_addr(uint32_t v_addr) {
   for (auto const& block : g_memory) {
@@ -120,9 +122,11 @@ void check_dynamic_table(Elf32_File* elf_file,
           std::cout << "string table at : " << std::hex << dyn.d_un.d_val
                     << std::endl;
           string_table = get_p_addr(dyn.d_un.d_val);
+          g_string_table = dyn.d_un.d_val;
         } else if (dyn.d_tag == DT_SYMTAB) {
           std::cout << "symbol table at : " << std::hex << dyn.d_un.d_val
                     << std::endl;
+          g_symbol_table = dyn.d_un.d_val;
         } else if (dyn.d_tag == DT_HASH) {
           uint32_t* p = (uint32_t*)get_p_addr(dyn.d_un.d_val);
           std::cout << "symbol table size at = " << std::hex << dyn.d_un.d_val
@@ -142,6 +146,41 @@ void check_dynamic_table(Elf32_File* elf_file,
         } else if (dyn.d_tag == DT_RPATH) {
           std::cout << "rpath : [" << (string_table + dyn.d_un.d_val) << "]"
                     << std::endl;
+        }
+      }
+    }
+  }
+}
+
+void read_copy_relocation(Elf32_File* elf_file) {
+  std::vector<Elf32_Shdr> s_hdrs;
+  uint32_t s_shrs_count = 0;
+
+  elf_enum_shdr(elf_file, nullptr, &s_shrs_count);
+  s_hdrs.resize(s_shrs_count);
+  elf_enum_shdr(elf_file, s_hdrs.data(), &s_shrs_count);
+
+  for (auto const& sh : s_hdrs) {
+    if (sh.sh_type == SHT_REL) {
+      uint32_t rel_count = sh.sh_size / sizeof(Elf32_Rel);
+      std::cout << "rel table at: " << std::hex << sh.sh_addr << std::endl;
+      std::cout << "rel table count: [" << rel_count << "]" << std::endl;
+
+      Elf32_Rel* rel_t = (Elf32_Rel*)get_p_addr(sh.sh_addr);
+
+      for (uint32_t i = 0; i < rel_count; i++) {
+        std::cout << "rel info = " << rel_t[i].r_info << std::endl;
+        uint32_t r_type = ELF32_R_TYPE(rel_t[i].r_info);
+        std::cout << "rel type = " << r_type << std::endl;
+        if (r_type == R_386_COPY) {
+          auto sym_table = (Elf32_Sym*)get_p_addr(g_symbol_table);
+          uint32_t sym_index = ELF32_R_SYM(rel_t[i].r_info);
+          std::cout << "sym_index = " << sym_index << std::endl;
+
+          char* string_table = (char*)get_p_addr(g_string_table);
+          char* name = string_table + sym_table[sym_index].st_name;
+
+          std::cout << "symble name = " << name << std::endl;
         }
       }
     }
@@ -169,15 +208,10 @@ int main(int argc, const char** argv) {
   p_hdrs.resize(p_hdrs_count);
   elf_enum_phdr(elf_file, p_hdrs.data(), &p_hdrs_count);
 
-  std::vector<Elf32_Shdr> s_hdrs;
-  uint32_t s_shrs_count = 0;
-
-  elf_enum_shdr(elf_file, nullptr, &s_shrs_count);
-  s_hdrs.resize(s_shrs_count);
-  elf_enum_shdr(elf_file, s_hdrs.data(), &s_shrs_count);
-
   load_p_headers(elf_file, p_hdrs);
   check_dynamic_table(elf_file, p_hdrs);
+
+  read_copy_relocation(elf_file);
 
   elf_close_file(elf_file);
 
