@@ -4,7 +4,9 @@ elf_dep = declare_dependency(
     include_directories : ['inc'],
     sources: [
         'inc/elf/elf.h',
-        'src/elf.c'
+        'inc/elf/elf_obj.hpp',
+        'src/elf.c',
+        'src/elf_obj.cc',
     ],
 )
 
@@ -16,6 +18,7 @@ executable(
     ],
     cpp_args: [
         '-std=c++17',
+        '-fno-rtti',
     ],
     dependencies: [ elf_dep ],
 )

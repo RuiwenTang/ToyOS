@@ -71,6 +71,7 @@ kernel_cpp_args = [
     '-fno-builtin',
     '-std=c++14',
     '-nostdinc++',
+    '-fno-rtti',
 ]
 
 kernel_link_args = [
