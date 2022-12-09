@@ -25,9 +25,13 @@ class ElfObject {
 
   virtual bool OnAllocateElfDyn(uint32_t count) = 0;
 
+  virtual bool OnAllocateLibNames(uint32_t count) = 0;
+
   virtual Elf32_Shdr* OnGetShdrs() = 0;
 
   virtual Elf32_Dyn* OnGetDyns() = 0;
+
+  virtual char** OnGetLibNames() = 0;
 
   virtual bool OnAllocateMemory(uint32_t* base, uint32_t* size) = 0;
 
@@ -50,6 +54,9 @@ class ElfObject {
 
   bool Relocation();
 
+  void EnumerateRequiredLib(Elf32_Dyn* dyn, uint32_t count, char** names,
+                            uint32_t* name_count);
+
  private:
   ElfObject* m_root = 0;
   const char* m_lib_path;
@@ -58,10 +65,15 @@ class ElfObject {
   uint32_t m_mem_base = 0;
   uint32_t m_phdr_count = 0;
   uint32_t m_dyn_count = 0;
+  uint32_t m_lib_count = 0;
   uint32_t m_shdr_count = 0;
   uint32_t m_allocaed_base = 0;
   uint32_t m_allocated_size = 0;
   uint32_t m_current_brk = 0;
+  uint32_t* m_hash = nullptr;
+  char* m_string_table = nullptr;
+  uint32_t m_string_table_size = 0;
+  Elf32_Sym* m_symbol_table = nullptr;
 };
 
 #endif  // COMMON_ELF_INC_ELF_OBJ_HPP

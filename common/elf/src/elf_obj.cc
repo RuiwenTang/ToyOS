@@ -151,7 +151,53 @@ bool ElfObject::ReadDynamicTable() {
         // reach the end
         break;
       }
+
+      switch (dyn_ptr[j].d_tag) {
+        case DT_HASH:
+          m_hash = static_cast<uint32_t*>(
+              this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+          break;
+        case DT_STRTAB:
+          m_string_table =
+              static_cast<char*>(this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+          break;
+        case DT_SYMTAB:
+          m_symbol_table = static_cast<Elf32_Sym*>(
+              this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+          break;
+        case DT_STRSZ:
+          m_string_table_size = dyn_ptr[j].d_un.d_val;
+          break;
+      }
     }
+
+    // now query all required library
+    EnumerateRequiredLib(dyn_ptr, m_dyn_count, nullptr, &m_lib_count);
+    if (m_lib_count == 0) {
+      continue;
+    }
+    if (!OnAllocateLibNames(m_lib_count)) {
+      continue;
+    }
+    EnumerateRequiredLib(dyn_ptr, m_dyn_count, OnGetLibNames(), &m_lib_count);
   }
   return true;
+}
+
+void ElfObject::EnumerateRequiredLib(Elf32_Dyn* dyn, uint32_t count,
+                                     char** names, uint32_t* name_count) {
+  uint32_t temp_count = 0;
+  for (uint32_t i = 0; i < count; i++) {
+    if (dyn[i].d_tag == DT_NEEDED) {
+      temp_count++;
+
+      if (names) {
+        names[i] = m_string_table + dyn[i].d_un.d_val;
+      }
+    }
+  }
+
+  if (name_count) {
+    *name_count = temp_count;
+  }
 }
