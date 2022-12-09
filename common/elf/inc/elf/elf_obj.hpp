@@ -42,6 +42,8 @@ class ElfObject {
 
   bool LoadPhdrs();
 
+  bool LoadShdrs();
+
   void CalculateMemSize();
 
   bool LoadIntoMemory();

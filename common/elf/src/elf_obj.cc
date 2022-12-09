@@ -43,6 +43,10 @@ bool ElfObject::Load(bool is_root) {
     return false;
   }
 
+  if (!LoadShdrs()) {
+    return false;
+  }
+
   return true;
 }
 
@@ -67,6 +71,24 @@ bool ElfObject::LoadPhdrs() {
 
   if (GetMemorySize() == 0) {
     return false;
+  }
+
+  return true;
+}
+
+bool ElfObject::LoadShdrs() {
+  if (elf_enum_shdr(m_elf_file, nullptr, &m_shdr_count) != 0) {
+    return false;
+  }
+
+  if (m_shdr_count > 0) {
+    if (!OnResizeShdrs(m_shdr_count)) {
+      return false;
+    }
+
+    if (elf_enum_shdr(m_elf_file, OnGetShdrs(), &m_shdr_count) != 0) {
+      return false;
+    }
   }
 
   return true;
