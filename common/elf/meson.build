@@ -14,6 +14,8 @@ executable(
     'elf_test',
     native: true,
     sources: [
+    'test/host_elf_obj.cc',
+    'test/host_elf_obj.hpp',
     'test/test.cc',
     ],
     cpp_args: [

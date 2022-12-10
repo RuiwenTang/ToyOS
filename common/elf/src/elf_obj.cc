@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <elf/elf_obj.hpp>
 
 ElfObject::ElfObject(const char* path)
@@ -45,6 +47,35 @@ bool ElfObject::Load(bool is_root) {
 
   if (!LoadShdrs()) {
     return false;
+  }
+
+  if (is_root && !ReadCopyRelocations()) {
+    return false;
+  }
+
+  auto libs = this->OnGetLibNames();
+  for (uint32_t i = 0; i < m_lib_count; i++) {
+    auto lib = ElfObject::OpenLib(is_root ? this : this->m_root, libs[i]);
+
+    if (!lib->Load(false)) {
+      return false;
+    }
+  }
+
+  if (is_root) {
+    auto libs = this->OnGetTotalLibs();
+
+    for (uint32_t i = 0; i < this->OnGetTotalLibCount(); i++) {
+      if (!libs[i].LoadSymbols()) {
+        return false;
+      }
+    }
+
+    for (uint32_t i = 0; i < this->OnGetTotalLibCount(); i++) {
+      if (!libs[i].Relocation()) {
+        return false;
+      }
+    }
   }
 
   return true;
@@ -203,6 +234,121 @@ bool ElfObject::ReadDynamicTable() {
     }
     EnumerateRequiredLib(dyn_ptr, m_dyn_count, OnGetLibNames(), &m_lib_count);
   }
+  return true;
+}
+
+bool ElfObject::ReadCopyRelocations() {
+  auto shdrs = OnGetShdrs();
+
+  for (uint32_t i = 0; i < m_shdr_count; i++) {
+    if (shdrs[i].sh_type == SHT_REL) {
+      auto rel_table =
+          static_cast<Elf32_Rel*>(this->OnVirtualToPhy(shdrs[i].sh_addr));
+
+      for (uint32_t j = 0; j < shdrs[i].sh_size / sizeof(Elf32_Rel); j++) {
+        if (ELF32_R_TYPE(rel_table[j].r_info) == R_386_COPY) {
+          auto& symbol = m_symbol_table[ELF32_R_SYM(rel_table[j].r_info)];
+          auto symbol_name = m_string_table + symbol.st_name;
+
+          this->OnAddGlobalSymbol(symbol_name, rel_table[j].r_offset);
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+bool ElfObject::LoadSymbols() {
+  if (m_hash == nullptr) {
+    return false;
+  }
+
+  uint32_t symbol_table_size = m_hash[1];
+
+  for (uint32_t i = 0; i < symbol_table_size; i++) {
+    auto* symbol = &m_symbol_table[i];
+    auto symbol_name = m_string_table + symbol->st_name;
+
+    this->OnAddSymbol(symbol_name, symbol->st_value + m_mem_base);
+  }
+
+  return true;
+}
+
+bool ElfObject::Relocation() {
+  auto shdrs = this->OnGetShdrs();
+  for (uint32_t i = 0; i < m_shdr_count; i++) {
+    if (shdrs[i].sh_type == SHT_REL) {
+      auto rel_table =
+          static_cast<Elf32_Rel*>(this->OnVirtualToPhy(shdrs[i].sh_addr));
+
+      for (uint32_t j = 0; j < shdrs[i].sh_size / sizeof(Elf32_Rel); j++) {
+        auto& rel = rel_table[i];
+        uint8_t rel_type = ELF32_R_TYPE(rel.r_info);
+        uint32_t rel_symbol = ELF32_R_SYM(rel.r_info);
+
+        if (rel_type == R_386_NONE) continue;
+
+        auto& symbol = m_symbol_table[rel_symbol];
+        // this may be error
+        uint32_t symbol_loc = m_mem_base + symbol.st_value;
+        auto symbol_name = m_string_table + symbol.st_name;
+
+        if (rel_type == R_386_32 || rel_type == R_386_PC32 ||
+            rel_type == R_386_COPY || rel_type == R_386_GLOB_DAT ||
+            rel_type == R_386_JMP_SLOT) {
+          if (symbol_name) {
+            symbol_loc = this->OnFindSymbol(symbol_name);
+          }
+        }
+
+        if (rel_type == R_386_GLOB_DAT) {
+          if (symbol_name) {
+            symbol_loc = this->m_root
+                             ? this->m_root->OnFindGlobalSymbol(symbol_name)
+                             : this->OnFindGlobalSymbol(symbol_name);
+          }
+        }
+
+        // Perform the actual relocation
+
+        void* reloc_loc = this->OnVirtualToPhy(m_mem_base + rel.r_offset);
+
+        switch (rel_type) {
+          case R_386_32:
+            symbol_loc += *((uint32_t*)reloc_loc);
+            *((uintptr_t*)reloc_loc) = (uintptr_t)symbol_loc;
+            break;
+
+          case R_386_PC32:
+            symbol_loc += *((uint32_t*)reloc_loc);
+            symbol_loc -= m_mem_base + rel.r_offset;
+            *((uintptr_t*)reloc_loc) = (uintptr_t)symbol_loc;
+            break;
+
+          case R_386_COPY:
+            memcpy(reloc_loc, this->OnVirtualToPhy(symbol_loc), symbol.st_size);
+            break;
+
+          case R_386_GLOB_DAT:
+          case R_386_JMP_SLOT:
+            *((uintptr_t*)reloc_loc) = (uintptr_t)symbol_loc;
+            break;
+
+          case R_386_RELATIVE:
+            symbol_loc = m_mem_base + *((uint32_t*)reloc_loc);
+            *((uintptr_t*)reloc_loc) = (uintptr_t)symbol_loc;
+            break;
+
+          default:
+
+            break;
+        }
+      }
+    }
+  }
+
   return true;
 }
 

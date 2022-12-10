@@ -16,6 +16,8 @@ class ElfObject {
 
   uint32_t GetMemorySize() const { return m_mem_size; }
 
+  static ElfObject* OpenLib(ElfObject* root, char* path);
+
  protected:
   virtual bool OnResizePhdrs(uint32_t count) = 0;
 
@@ -37,6 +39,18 @@ class ElfObject {
 
   virtual void* OnVirtualToPhy(uint32_t v_addr) = 0;
 
+  virtual void OnAddGlobalSymbol(char* name, uint32_t addr) = 0;
+
+  virtual void OnAddSymbol(char* name, uint32_t addr) = 0;
+
+  virtual uint32_t OnFindSymbol(char* name) = 0;
+
+  virtual uint32_t OnFindGlobalSymbol(char* name) = 0;
+
+  virtual uint32_t OnGetTotalLibCount() = 0;
+
+  virtual ElfObject* OnGetTotalLibs() = 0;
+
  private:
   bool CheckHeader();
 
@@ -50,9 +64,9 @@ class ElfObject {
 
   bool ReadDynamicTable();
 
-  void ReadCopyRelocations();
+  bool LoadSymbols();
 
-  void LoadSymbols();
+  bool ReadCopyRelocations();
 
   bool Relocation();
 
