@@ -1,7 +1,17 @@
 
 #include "host_elf_obj.hpp"
 
-ElfObject *ElfObject::OpenLib(ElfObject *root, char *path) { return nullptr; }
+ElfObject *ElfObject::OpenLib(ElfObject *root, char *path) {
+  if (root == nullptr) {
+    return new HostElfObject(path);
+  }
+
+  auto lib = new HostElfObject(path);
+
+  static_cast<HostElfObject *>(root)->AddSubLibrary(lib);
+
+  return lib;
+}
 
 HostElfObject::~HostElfObject() {
   for (auto lib : m_sub_libs) {
@@ -11,6 +21,7 @@ HostElfObject::~HostElfObject() {
 
 void HostElfObject::AddSubLibrary(HostElfObject *lib) {
   m_sub_libs.emplace_back(lib);
+  lib->SetRoot(this);
 }
 
 bool HostElfObject::OnResizePhdrs(uint32_t count) {
@@ -67,6 +78,14 @@ bool HostElfObject::OnAllocateMemory(uint32_t *base, uint32_t *size) {
   region->base = GetMemoryBase();
   region->size = GetMemorySize();
   region->data.resize(region->size);
+
+  if (base) {
+    *base = region->base;
+  }
+
+  if (size) {
+    *size = region->size;
+  }
 
   m_virtual_memory.emplace_back(std::move(region));
 

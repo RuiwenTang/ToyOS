@@ -55,6 +55,20 @@
             "environment": [],
             "externalConsole": false,
             "MIMode": "lldb"
+        },
+        {
+            "name": "host_elf_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/common/elf/host_elf_test",
+            "args": [
+                "${workspaceFolder}/build/apps/system_server/init/init.dl"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
         }
     ],
 }

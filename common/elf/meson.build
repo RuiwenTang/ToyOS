@@ -17,6 +17,23 @@ executable(
     'test/host_elf_obj.cc',
     'test/host_elf_obj.hpp',
     'test/test.cc',
+    'test/test_common.cc',
+    ],
+    cpp_args: [
+        '-std=c++17',
+        '-fno-rtti',
+    ],
+    dependencies: [ elf_dep ],
+)
+
+executable(
+    'host_elf_test',
+    native: true,
+    sources: [
+    'test/host_elf_obj.cc',
+    'test/host_elf_obj.hpp',
+    'test/host_elf_test.cc',
+    'test/test_common.cc',
     ],
     cpp_args: [
         '-std=c++17',

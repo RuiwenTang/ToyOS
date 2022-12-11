@@ -196,43 +196,43 @@ bool ElfObject::ReadDynamicTable() {
                                 p_headers[i].p_filesz) != 0) {
         return false;
       }
-    }
 
-    auto dyn_ptr = this->OnGetDyns();
-    for (uint32_t j = 0; j < m_dyn_count; j++) {
-      if (dyn_ptr[j].d_tag == DT_NULL) {
-        // reach the end
-        break;
+      auto dyn_ptr = this->OnGetDyns();
+      for (uint32_t j = 0; j < m_dyn_count; j++) {
+        if (dyn_ptr[j].d_tag == DT_NULL) {
+          // reach the end
+          break;
+        }
+
+        switch (dyn_ptr[j].d_tag) {
+          case DT_HASH:
+            m_hash = static_cast<uint32_t*>(
+                this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+            break;
+          case DT_STRTAB:
+            m_string_table =
+                static_cast<char*>(this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+            break;
+          case DT_SYMTAB:
+            m_symbol_table = static_cast<Elf32_Sym*>(
+                this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+            break;
+          case DT_STRSZ:
+            m_string_table_size = dyn_ptr[j].d_un.d_val;
+            break;
+        }
       }
 
-      switch (dyn_ptr[j].d_tag) {
-        case DT_HASH:
-          m_hash = static_cast<uint32_t*>(
-              this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
-          break;
-        case DT_STRTAB:
-          m_string_table =
-              static_cast<char*>(this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
-          break;
-        case DT_SYMTAB:
-          m_symbol_table = static_cast<Elf32_Sym*>(
-              this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
-          break;
-        case DT_STRSZ:
-          m_string_table_size = dyn_ptr[j].d_un.d_val;
-          break;
+      // now query all required library
+      EnumerateRequiredLib(dyn_ptr, m_dyn_count, nullptr, &m_lib_count);
+      if (m_lib_count == 0) {
+        continue;
       }
+      if (!OnAllocateLibNames(m_lib_count)) {
+        continue;
+      }
+      EnumerateRequiredLib(dyn_ptr, m_dyn_count, OnGetLibNames(), &m_lib_count);
     }
-
-    // now query all required library
-    EnumerateRequiredLib(dyn_ptr, m_dyn_count, nullptr, &m_lib_count);
-    if (m_lib_count == 0) {
-      continue;
-    }
-    if (!OnAllocateLibNames(m_lib_count)) {
-      continue;
-    }
-    EnumerateRequiredLib(dyn_ptr, m_dyn_count, OnGetLibNames(), &m_lib_count);
   }
   return true;
 }

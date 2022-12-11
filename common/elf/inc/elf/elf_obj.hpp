@@ -19,6 +19,8 @@ class ElfObject {
   static ElfObject* OpenLib(ElfObject* root, char* path);
 
  protected:
+  void SetRoot(ElfObject* root) { m_root = root; }
+
   virtual bool OnResizePhdrs(uint32_t count) = 0;
 
   virtual Elf32_Phdr* OnGetPhdrs() = 0;
