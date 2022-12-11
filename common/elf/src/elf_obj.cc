@@ -66,13 +66,13 @@ bool ElfObject::Load(bool is_root) {
     auto libs = this->OnGetTotalLibs();
 
     for (uint32_t i = 0; i < this->OnGetTotalLibCount(); i++) {
-      if (!libs[i].LoadSymbols()) {
+      if (!libs[i]->LoadSymbols()) {
         return false;
       }
     }
 
     for (uint32_t i = 0; i < this->OnGetTotalLibCount(); i++) {
-      if (!libs[i].Relocation()) {
+      if (!libs[i]->Relocation()) {
         return false;
       }
     }

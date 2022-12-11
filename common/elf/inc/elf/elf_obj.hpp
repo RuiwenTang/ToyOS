@@ -49,7 +49,7 @@ class ElfObject {
 
   virtual uint32_t OnGetTotalLibCount() = 0;
 
-  virtual ElfObject* OnGetTotalLibs() = 0;
+  virtual ElfObject** OnGetTotalLibs() = 0;
 
  private:
   bool CheckHeader();
