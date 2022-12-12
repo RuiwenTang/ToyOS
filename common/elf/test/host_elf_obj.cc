@@ -1,12 +1,31 @@
 
 #include "host_elf_obj.hpp"
 
+#include <filesystem>
+#include <iostream>
+#include <vector>
+
+std::filesystem::path g_root_path;
+std::vector<std::filesystem::path> g_loaded_path;
+
 ElfObject *ElfObject::OpenLib(ElfObject *root, char *path) {
   if (root == nullptr) {
+    std::filesystem::path temp_path{path};
+
+    if (temp_path.is_absolute()) {
+      temp_path.remove_filename();
+      g_root_path = temp_path;
+    }
+
     return new HostElfObject(path);
   }
 
-  auto lib = new HostElfObject(path);
+  auto lib_path = g_root_path;
+  lib_path.append(path);
+
+  g_loaded_path.emplace_back(lib_path);
+
+  auto lib = new HostElfObject(g_loaded_path.back().c_str());
 
   static_cast<HostElfObject *>(root)->AddSubLibrary(lib);
 
