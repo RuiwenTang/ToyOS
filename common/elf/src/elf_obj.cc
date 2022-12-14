@@ -25,17 +25,25 @@ bool ElfObject::Load(bool is_root) {
   }
 
   if (is_root) {
-    if (!this->OnAllocateMemory(&m_allocaed_base, &m_allocated_size)) {
+    m_allocated_base = GetMemoryBase();
+    m_allocated_size = GetMemorySize();
+    if (!this->OnAllocateMemory(&m_allocated_base, &m_allocated_size)) {
       return false;
     }
 
   } else {
-    if (!m_root->OnAllocateMemory(&m_allocated_size, &m_allocated_size)) {
+    m_allocated_base = m_root->m_current_brk;
+    m_allocated_size = GetMemorySize();
+    if (!m_root->OnAllocateMemory(&m_allocated_base, &m_allocated_size)) {
       return false;
     }
   }
 
-  m_current_brk = m_allocaed_base + m_allocated_size;
+  if (is_root) {
+    m_current_brk = m_allocated_base + m_allocated_size;
+  } else {
+    m_root->m_current_brk = m_allocated_base + m_allocated_size;
+  }
 
   if (!LoadIntoMemory()) {
     return false;
@@ -138,7 +146,14 @@ bool ElfObject::LoadIntoMemory() {
         return false;
       }
 
-      void* p_addr = this->OnVirtualToPhy(p_headers[i].p_vaddr);
+      void* p_addr = nullptr;
+      if (m_root) {
+        uint32_t addr = m_allocated_base + p_headers[i].p_paddr;
+
+        p_addr = m_root->OnVirtualToPhy(addr);
+      } else {
+        p_addr = this->OnVirtualToPhy(p_headers[i].p_vaddr);
+      }
 
       if (m_elf_file->impl_read(m_elf_file, (char*)p_addr,
                                 p_headers[i].p_filesz) != 0) {

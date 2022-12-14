@@ -72,17 +72,21 @@ bool HostElfObject::OnAllocateLibNames(uint32_t count) {
 char **HostElfObject::OnGetLibNames() { return m_lib_names.data(); }
 
 bool HostElfObject::OnAllocateMemory(uint32_t *base, uint32_t *size) {
+  if (base == nullptr || size == nullptr) {
+    return false;
+  }
+
   auto it = std::find_if(
       m_virtual_memory.begin(), m_virtual_memory.end(),
-      [this](std::unique_ptr<VirtualMemoryRegion> const &region) {
-        uint32_t begin = GetMemoryBase();
-        uint32_t end = begin + GetMemorySize();
+      [base, size](std::unique_ptr<VirtualMemoryRegion> const &region) {
+        uint32_t begin = *base;
+        uint32_t end = begin + *size;
 
-        if (region->base <= begin && begin <= region->base + region->size) {
+        if (region->base < begin && begin < region->base + region->size) {
           return true;
         }
 
-        if (region->base <= end && end <= region->base + region->size) {
+        if (region->base < end && end < region->base + region->size) {
           return true;
         }
 
@@ -94,17 +98,13 @@ bool HostElfObject::OnAllocateMemory(uint32_t *base, uint32_t *size) {
 
   std::unique_ptr<VirtualMemoryRegion> region{new VirtualMemoryRegion};
 
-  region->base = GetMemoryBase();
-  region->size = GetMemorySize();
+  region->base = *base;
+  region->size = *size;
   region->data.resize(region->size);
 
-  if (base) {
-    *base = region->base;
-  }
+  *base = region->base;
 
-  if (size) {
-    *size = region->size;
-  }
+  *size = region->size;
 
   m_virtual_memory.emplace_back(std::move(region));
 

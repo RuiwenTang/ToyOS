@@ -85,7 +85,7 @@ class ElfObject {
   uint32_t m_dyn_count = 0;
   uint32_t m_lib_count = 0;
   uint32_t m_shdr_count = 0;
-  uint32_t m_allocaed_base = 0;
+  uint32_t m_allocated_base = 0;
   uint32_t m_allocated_size = 0;
   uint32_t m_current_brk = 0;
   uint32_t* m_hash = nullptr;
