@@ -75,6 +75,8 @@ class ElfObject {
   void EnumerateRequiredLib(Elf32_Dyn* dyn, uint32_t count, char** names,
                             uint32_t* name_count);
 
+  void* VirtualToPhy(uint32_t v_addr);
+
  private:
   ElfObject* m_root = 0;
   const char* m_lib_path;

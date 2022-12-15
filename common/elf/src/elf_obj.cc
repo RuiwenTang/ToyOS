@@ -34,6 +34,7 @@ bool ElfObject::Load(bool is_root) {
   } else {
     m_allocated_base = m_root->m_current_brk;
     m_allocated_size = GetMemorySize();
+    m_mem_base = m_allocated_base;
     if (!m_root->OnAllocateMemory(&m_allocated_base, &m_allocated_size)) {
       return false;
     }
@@ -84,6 +85,8 @@ bool ElfObject::Load(bool is_root) {
         return false;
       }
     }
+
+    this->Relocation();
   }
 
   return true;
@@ -146,14 +149,7 @@ bool ElfObject::LoadIntoMemory() {
         return false;
       }
 
-      void* p_addr = nullptr;
-      if (m_root) {
-        uint32_t addr = m_allocated_base + p_headers[i].p_paddr;
-
-        p_addr = m_root->OnVirtualToPhy(addr);
-      } else {
-        p_addr = this->OnVirtualToPhy(p_headers[i].p_vaddr);
-      }
+      void* p_addr = this->VirtualToPhy(p_headers[i].p_vaddr);
 
       if (m_elf_file->impl_read(m_elf_file, (char*)p_addr,
                                 p_headers[i].p_filesz) != 0) {
@@ -222,15 +218,15 @@ bool ElfObject::ReadDynamicTable() {
         switch (dyn_ptr[j].d_tag) {
           case DT_HASH:
             m_hash = static_cast<uint32_t*>(
-                this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+                this->VirtualToPhy(dyn_ptr[j].d_un.d_val));
             break;
           case DT_STRTAB:
             m_string_table =
-                static_cast<char*>(this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+                static_cast<char*>(this->VirtualToPhy(dyn_ptr[j].d_un.d_val));
             break;
           case DT_SYMTAB:
             m_symbol_table = static_cast<Elf32_Sym*>(
-                this->OnVirtualToPhy(dyn_ptr[j].d_un.d_val));
+                this->VirtualToPhy(dyn_ptr[j].d_un.d_val));
             break;
           case DT_STRSZ:
             m_string_table_size = dyn_ptr[j].d_un.d_val;
@@ -258,7 +254,7 @@ bool ElfObject::ReadCopyRelocations() {
   for (uint32_t i = 0; i < m_shdr_count; i++) {
     if (shdrs[i].sh_type == SHT_REL) {
       auto rel_table =
-          static_cast<Elf32_Rel*>(this->OnVirtualToPhy(shdrs[i].sh_addr));
+          static_cast<Elf32_Rel*>(this->VirtualToPhy(shdrs[i].sh_addr));
 
       for (uint32_t j = 0; j < shdrs[i].sh_size / sizeof(Elf32_Rel); j++) {
         if (ELF32_R_TYPE(rel_table[j].r_info) == R_386_COPY) {
@@ -284,6 +280,9 @@ bool ElfObject::LoadSymbols() {
   for (uint32_t i = 0; i < symbol_table_size; i++) {
     auto* symbol = &m_symbol_table[i];
     auto symbol_name = m_string_table + symbol->st_name;
+    if (symbol_name[0] == '\0') {
+      continue;
+    }
 
     this->OnAddSymbol(symbol_name, symbol->st_value + m_mem_base);
   }
@@ -296,10 +295,10 @@ bool ElfObject::Relocation() {
   for (uint32_t i = 0; i < m_shdr_count; i++) {
     if (shdrs[i].sh_type == SHT_REL) {
       auto rel_table =
-          static_cast<Elf32_Rel*>(this->OnVirtualToPhy(shdrs[i].sh_addr));
+          static_cast<Elf32_Rel*>(this->VirtualToPhy(shdrs[i].sh_addr));
 
       for (uint32_t j = 0; j < shdrs[i].sh_size / sizeof(Elf32_Rel); j++) {
-        auto& rel = rel_table[i];
+        auto& rel = rel_table[j];
         uint8_t rel_type = ELF32_R_TYPE(rel.r_info);
         uint32_t rel_symbol = ELF32_R_SYM(rel.r_info);
 
@@ -328,7 +327,7 @@ bool ElfObject::Relocation() {
 
         // Perform the actual relocation
 
-        void* reloc_loc = this->OnVirtualToPhy(m_mem_base + rel.r_offset);
+        void* reloc_loc = this->VirtualToPhy(m_mem_base + rel.r_offset);
 
         switch (rel_type) {
           case R_386_32:
@@ -343,7 +342,7 @@ bool ElfObject::Relocation() {
             break;
 
           case R_386_COPY:
-            memcpy(reloc_loc, this->OnVirtualToPhy(symbol_loc), symbol.st_size);
+            memcpy(reloc_loc, this->VirtualToPhy(symbol_loc), symbol.st_size);
             break;
 
           case R_386_GLOB_DAT:
@@ -382,5 +381,13 @@ void ElfObject::EnumerateRequiredLib(Elf32_Dyn* dyn, uint32_t count,
 
   if (name_count) {
     *name_count = temp_count;
+  }
+}
+
+void* ElfObject::VirtualToPhy(uint32_t v_addr) {
+  if (m_root) {
+    return m_root->OnVirtualToPhy(m_mem_base + v_addr);
+  } else {
+    return this->OnVirtualToPhy(v_addr);
   }
 }

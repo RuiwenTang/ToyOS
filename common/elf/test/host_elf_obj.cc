@@ -115,7 +115,7 @@ void *HostElfObject::OnVirtualToPhy(uint32_t v_addr) {
   auto it = std::find_if(
       m_virtual_memory.begin(), m_virtual_memory.end(),
       [v_addr](std::unique_ptr<VirtualMemoryRegion> const &region) {
-        if (region->base <= v_addr && v_addr <= region->base + region->size) {
+        if (region->base <= v_addr && v_addr < region->base + region->size) {
           return true;
         }
 
@@ -142,8 +142,6 @@ void HostElfObject::OnAddGlobalSymbol(char *name, uint32_t addr) {
 }
 
 void HostElfObject::OnAddSymbol(char *name, uint32_t addr) {
-  name = (char *)OnVirtualToPhy((uint64_t)name);
-
   auto it = m_symbols.find(name);
   if (it != m_symbols.end()) {
     return;
@@ -153,8 +151,6 @@ void HostElfObject::OnAddSymbol(char *name, uint32_t addr) {
 }
 
 uint32_t HostElfObject::OnFindSymbol(char *name) {
-  name = (char *)OnVirtualToPhy((uint32_t) reinterpret_cast<uint64_t>(name));
-
   auto it = m_symbols.find(name);
   if (it == m_symbols.end()) {
     return 0;
