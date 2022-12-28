@@ -261,7 +261,7 @@ bool ElfObject::ReadCopyRelocations() {
           auto& symbol = m_symbol_table[ELF32_R_SYM(rel_table[j].r_info)];
           auto symbol_name = m_string_table + symbol.st_name;
 
-          this->OnAddGlobalSymbol(symbol_name, rel_table[j].r_offset);
+          this->AddGlobalSymbol(symbol_name, rel_table[j].r_offset);
         }
       }
     }
@@ -284,7 +284,7 @@ bool ElfObject::LoadSymbols() {
       continue;
     }
 
-    this->OnAddSymbol(symbol_name, symbol->st_value + m_mem_base);
+    this->AddSymbol(symbol_name, symbol->st_value + m_mem_base);
   }
 
   return true;
@@ -313,7 +313,7 @@ bool ElfObject::Relocation() {
             rel_type == R_386_COPY || rel_type == R_386_GLOB_DAT ||
             rel_type == R_386_JMP_SLOT) {
           if (symbol_name) {
-            symbol_loc = this->OnFindSymbol(symbol_name);
+            symbol_loc = this->FindSymbol(symbol_name);
           }
         }
 
@@ -327,7 +327,7 @@ bool ElfObject::Relocation() {
 
         // Perform the actual relocation
 
-        void* reloc_loc = this->VirtualToPhy(m_mem_base + rel.r_offset);
+        void* reloc_loc = this->VirtualToPhy(rel.r_offset);
 
         switch (rel_type) {
           case R_386_32:
@@ -389,5 +389,29 @@ void* ElfObject::VirtualToPhy(uint32_t v_addr) {
     return m_root->OnVirtualToPhy(m_mem_base + v_addr);
   } else {
     return this->OnVirtualToPhy(v_addr);
+  }
+}
+
+uint32_t ElfObject::FindSymbol(char* name) {
+  if (m_root) {
+    return m_root->OnFindSymbol(name);
+  }
+
+  return OnFindSymbol(name);
+}
+
+void ElfObject::AddSymbol(char* name, uint32_t addr) {
+  if (m_root) {
+    m_root->OnAddSymbol(name, addr);
+  } else {
+    this->OnAddSymbol(name, addr);
+  }
+}
+
+void ElfObject::AddGlobalSymbol(char* name, uint32_t addr) {
+  if (m_root) {
+    m_root->OnAddGlobalSymbol(name, addr);
+  } else {
+    this->OnAddGlobalSymbol(name, addr);
   }
 }

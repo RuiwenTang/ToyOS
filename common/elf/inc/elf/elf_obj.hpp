@@ -77,6 +77,12 @@ class ElfObject {
 
   void* VirtualToPhy(uint32_t v_addr);
 
+  uint32_t FindSymbol(char* name);
+
+  void AddSymbol(char* name, uint32_t addr);
+
+  void AddGlobalSymbol(char* name, uint32_t addr);
+
  private:
   ElfObject* m_root = 0;
   const char* m_lib_path;
