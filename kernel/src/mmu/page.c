@@ -6,7 +6,6 @@
 
 #include "kprintf.h"
 #include "mmu/heap.h"
-#include "mmu/page.h"
 #include "mmu/palloc.h"
 #include "proc/proc.h"
 #include "screen/screen.h"

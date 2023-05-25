@@ -1,8 +1,6 @@
 #include <stddef.h>
 #include <umm_malloc.h>
 
-#include "mmu/page.h"
-
 void* UMM_MALLOC_CFG_HEAP_ADDR = NULL;
 
 uint32_t UMM_MALLOC_CFG_HEAP_SIZE = 0;

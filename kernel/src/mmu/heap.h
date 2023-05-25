@@ -2,8 +2,7 @@
 #define KERNEL_MMU_HEAP_H
 
 #include <stddef.h>
-
-#include "mmu/page.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
