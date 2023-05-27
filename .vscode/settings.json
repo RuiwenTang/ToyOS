@@ -16,5 +16,5 @@
     "--header-insertion=never",
     "--compile-commands-dir=build",
   ],
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
 }
