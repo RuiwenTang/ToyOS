@@ -1,6 +1,7 @@
 
 #include "host_elf_obj.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <vector>

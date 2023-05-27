@@ -45,7 +45,7 @@ fi
 
 if [ ! -d gcc-12.2.0 ]
 then
-    tar xvfz gcc-12.2.0.tar.xz
+    tar xvf gcc-12.2.0.tar.xz
     cd gcc-12.2.0
     ./contrib/download_prerequisites
     patch -p1 < ../../patchs/gcc-12.2.0.patch
