@@ -31,6 +31,18 @@
             "MIMode": "lldb"
         },
         {
+            "name": "ext2_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/common/lwext4/ext2_test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/common/lwext4",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb"
+        },
+        {
             "name": "mmu_alloc_test",
             "type": "cppdbg",
             "request": "launch",
