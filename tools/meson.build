@@ -1,6 +1,23 @@
 
 prog_python = import('python').find_installation('python3')
 
+cxxopts_dep = subproject('cxxopts').get_variable('cxxopts_dep')
+
+ext4_file_tool = executable(
+  'ext4_file_tool',
+  native: true,
+  cpp_args: [
+    '-std=c++17',
+  ],
+  sources: [
+    'ext4_file_tools.cc',
+  ],
+  dependencies: [
+    cxxopts_dep,
+    ext2fs_dep,
+  ],
+)
+
 mk_floppy = executable(
   'mk_floppy',
   native: true,
