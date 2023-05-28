@@ -40,7 +40,7 @@
             "cwd": "${workspaceFolder}/build/common/lwext4",
             "environment": [],
             "externalConsole": false,
-            "MIMode": "gdb"
+            "MIMode": "lldb"
         },
         {
             "name": "mmu_alloc_test",

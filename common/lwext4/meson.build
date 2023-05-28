@@ -2,7 +2,7 @@
 ext2fs_dep = declare_dependency(
     compile_args: [
         '-DCONFIG_HAVE_OWN_ERRNO=1',
-        '-DCONFIG_DEBUG_PRINTF=0'
+        '-DCONFIG_DEBUG_PRINTF=1'
     ],
     include_directories : ['include'],
     sources: [
