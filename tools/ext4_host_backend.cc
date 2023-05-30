@@ -1,8 +1,13 @@
 #include "ext4_host_backend.hpp"
 
-#define EXT4_FILEDEV_BSIZE 512
+#include <ext4_mbr.h>
+#include <ext4_mkfs.h>
 
-#define SECTOR_COUNT 0x80000
+#include <filesystem>
+
+constexpr uint64_t EXT4_FILEDEV_BSIZE = 512;
+
+constexpr uint64_t SECTOR_COUNT = 0x80000;
 
 uint8_t p_buffer[EXT4_FILEDEV_BSIZE];
 
@@ -24,9 +29,12 @@ Ext4File::Ext4File(std::string path) : m_file_path(std::move(path)) {}
 
 Ext4File::~Ext4File() {
   if (m_file_stream.is_open()) {
+    m_file_stream.flush();
     m_file_stream.close();
   }
 }
+
+bool Ext4File::IsValid() const { return m_file_stream.is_open(); }
 
 bool Ext4File::Format(const std::string& type) {
   uint32_t fs_type = 0;
@@ -48,7 +56,38 @@ bool Ext4File::Format(const std::string& type) {
     return false;
   }
 
-  return true;
+  if (!LoadPartionDev()) {
+    return false;
+  }
+
+  ext4_fs fs{};
+
+  ext4_mkfs_info info{
+      .block_size = 1024,
+      .journal = false,
+  };
+
+  auto r = ext4_mkfs(&fs, &m_sub_dev, &info, fs_type);
+
+  return r == EOK;
+}
+
+bool Ext4File::Install(const std::string& src, const std::string& dst) {
+  return false;
+}
+
+void Ext4File::Seekg(uint64_t offset) {
+  m_file_stream.seekg(offset, std::fstream::beg);
+}
+
+void Ext4File::Read(char* buf, uint64_t size) { m_file_stream.read(buf, size); }
+
+void Ext4File::Seekp(uint64_t offset) {
+  m_file_stream.seekp(offset, std::fstream::beg);
+}
+
+void Ext4File::Write(char* buf, uint64_t size) {
+  m_file_stream.write(buf, size);
 }
 
 bool Ext4File::Init() {
@@ -63,12 +102,15 @@ bool Ext4File::Init() {
     std::ofstream out_file(m_file_path, std::ios::binary);
 
     out_file.seekp(SECTOR_COUNT * EXT4_FILEDEV_BSIZE - 1);
-    out_file.write("1", 1);
+    char a = '\0';
+    out_file.write(&a, 1);
     out_file.close();
   }
 
-  m_file_stream.open(
-      m_file_path, std::fstream::in | std::fstream::out | std::fstream::binary);
+  if (!m_file_stream.is_open()) {
+    m_file_stream.open(m_file_path, std::fstream::in | std::fstream::out |
+                                        std::fstream::binary);
+  }
 
   auto size = m_file_stream.tellg();
 
@@ -84,4 +126,87 @@ bool Ext4File::Init() {
   s_ram_block.bdif->p_user = this;
 
   return true;
+}
+
+bool Ext4File::LoadPartionDev() {
+  ext4_mbr_bdevs devs{};
+  auto r = ext4_mbr_scan(&s_ram_block, &devs);
+
+  if (r == EOK) {
+    m_sub_dev = devs.partitions[0];
+
+    return true;
+  }
+
+  // need to partion first
+  struct ext4_mbr_parts parts {};
+  parts.division[0] = 100;
+  parts.division[1] = 0;
+  parts.division[2] = 0;
+  parts.division[3] = 0;
+
+  r = ext4_mbr_write(&s_ram_block, &parts, 0);
+
+  if (r != EOK) {
+    return false;
+  }
+
+  r = ext4_mbr_scan(&s_ram_block, &devs);
+
+  if (r != EOK) {
+    return false;
+  }
+
+  m_sub_dev = devs.partitions[0];
+
+  return true;
+}
+
+extern "C" {
+
+int mem_file_dev_open(struct ext4_blockdev* bdev) {
+  auto* file = reinterpret_cast<Ext4File*>(bdev->bdif->p_user);
+
+  if (file->IsValid()) {
+    return EOK;
+  }
+
+  return ENODEV;
+}
+
+int mem_file_dev_bread(struct ext4_blockdev* bdev, void* buf, uint64_t blk_id,
+                       uint32_t blk_cnt) {
+  auto* file = reinterpret_cast<Ext4File*>(bdev->bdif->p_user);
+
+  if (!file->IsValid()) {
+    return ENODEV;
+  }
+
+  auto offset = blk_id * EXT4_FILEDEV_BSIZE;
+
+  file->Seekg(offset);
+
+  file->Read((char*)buf, blk_cnt * EXT4_FILEDEV_BSIZE);
+
+  return EOK;
+}
+
+int mem_file_dev_bwrite(struct ext4_blockdev* bdev, const void* buf,
+                        uint64_t blk_id, uint32_t blk_cnt) {
+  auto* file = reinterpret_cast<Ext4File*>(bdev->bdif->p_user);
+
+  if (!file->IsValid()) {
+    return ENODEV;
+  }
+
+  auto offset = blk_id * EXT4_FILEDEV_BSIZE;
+
+  file->Seekp(offset);
+
+  file->Write((char*)buf, blk_cnt * EXT4_FILEDEV_BSIZE);
+
+  return EOK;
+}
+
+int mem_file_dev_close(struct ext4_blockdev* bdev) { return EOK; }
 }

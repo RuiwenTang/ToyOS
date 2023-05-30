@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include "ext4_host_backend.hpp"
+
 cxxopts::Options define_opts() {
   cxxopts::Options options("ext4-tools", "tools to edit ext4 img file");
 
@@ -38,6 +40,32 @@ cxxopts::Options define_opts() {
   return options;
 }
 
+int format_img(const cxxopts::ParseResult& res) {
+  std::string img_path{};
+
+  std::string file_type{};
+
+  if (res.count("file")) {
+    img_path = res["file"].as<std::string>();
+  }
+
+  if (res.count("type")) {
+    file_type = res["type"].as<std::string>();
+  }
+
+  if (img_path.empty() || file_type.empty()) {
+    return -1;
+  }
+
+  Ext4File ext4_file(img_path);
+
+  if (ext4_file.Format(file_type)) {
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
 int main(int argc, const char** argv) {
   auto opts = define_opts();
 
@@ -48,9 +76,8 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  if (res.count("file")) {
-    std::cout << "target file: " << res["file"].as<std::string>() << std::endl;
-    return 0;
+  if (res.count("type")) {
+    return format_img(res);
   }
 
   return 0;
