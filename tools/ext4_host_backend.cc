@@ -3,6 +3,8 @@
 #include <ext4_mbr.h>
 #include <ext4_mkfs.h>
 
+#include <array>
+#include <cstdio>
 #include <filesystem>
 
 constexpr uint64_t EXT4_FILEDEV_BSIZE = 512;
@@ -73,7 +75,62 @@ bool Ext4File::Format(const std::string& type) {
 }
 
 bool Ext4File::Install(const std::string& src, const std::string& dst) {
-  return false;
+  if (!Init()) {
+    return false;
+  }
+
+  if (!LoadPartionDev()) {
+    return false;
+  }
+
+  auto r = ext4_device_register(&m_sub_dev, "ext4_fs");
+
+  if (r != EOK) {
+    return false;
+  }
+
+  r = ext4_mount("ext4_fs", "/", false);
+
+  if (r != EOK) {
+    return false;
+  }
+
+  ext4_file file{};
+
+  r = ext4_fopen(&file, dst.c_str(), "w");
+
+  if (r != EOK) {
+    return false;
+  }
+
+  std::FILE* src_file = std::fopen(src.c_str(), "rb");
+  if (src_file == nullptr) {
+    return false;
+  }
+
+  std::array<char, 512> buffer{};
+
+  int32_t in_bytes = std::fread(buffer.data(), 1, 512, src_file);
+
+  while (in_bytes > 0) {
+    r = ext4_fwrite(&file, buffer.data(), in_bytes, nullptr);
+
+    if (r != EOK) {
+      return false;
+    }
+
+    in_bytes = std::fread(buffer.data(), 1, 512, src_file);
+  }
+
+  r = ext4_fclose(&file);
+
+  if (r != EOK) {
+    return false;
+  }
+
+  std::fclose(src_file);
+
+  return true;
 }
 
 void Ext4File::Seekg(uint64_t offset) {
@@ -132,7 +189,7 @@ bool Ext4File::LoadPartionDev() {
   ext4_mbr_bdevs devs{};
   auto r = ext4_mbr_scan(&s_ram_block, &devs);
 
-  if (r == EOK) {
+  if (r == EOK && devs.partitions[0].bdif) {
     m_sub_dev = devs.partitions[0];
 
     return true;
