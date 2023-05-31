@@ -74,3 +74,26 @@ install_limine = custom_target(
   ]
 )
 
+mk_disk_img = custom_target(
+  'mk_disk_img',
+  output: 'ext4_disk.img',
+  input: [  ],
+  command: [
+    ext4_file_tool, '-f', '@OUTPUT@', '-t', 'ext4'
+  ]
+)
+
+install_boot = run_target(
+  'install_boot',
+  command: [
+    limine_deploy, mk_disk_img
+  ]
+)
+
+install_limine_sys = run_target(
+  'install_limine_sys',
+  command: [
+    ext4_file_tool, '-f', mk_disk_img, '-s', limine_sys, '-d', '/boot/limine.sys'
+  ]
+)
+

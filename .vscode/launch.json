@@ -38,8 +38,10 @@
             "args": [
                 "-f",
                 "${workspaceFolder}/build/tools/disk.img",
-                "-t",
-                "ext4",
+                "-s",
+                "${workspaceFolder}/common/limine/extern/limine.sys",
+                "-d",
+                "/boot/limine.sys",
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

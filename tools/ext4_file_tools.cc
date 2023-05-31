@@ -66,6 +66,38 @@ int format_img(const cxxopts::ParseResult& res) {
   }
 }
 
+int install_file(const cxxopts::ParseResult& res) {
+  std::string img_path{};
+
+  std::string src_file{};
+
+  std::string dst_file{};
+
+  if (res.count("file")) {
+    img_path = res["file"].as<std::string>();
+  }
+
+  if (res.count("src")) {
+    src_file = res["src"].as<std::string>();
+  }
+
+  if (res.count("dst")) {
+    dst_file = res["dst"].as<std::string>();
+  }
+
+  if (img_path.empty() || src_file.empty() || dst_file.empty()) {
+    return -1;
+  }
+
+  Ext4File ext4_file(img_path);
+
+  if (ext4_file.Install(src_file, dst_file)) {
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
 int main(int argc, const char** argv) {
   auto opts = define_opts();
 
@@ -78,6 +110,10 @@ int main(int argc, const char** argv) {
 
   if (res.count("type")) {
     return format_img(res);
+  }
+
+  if (res.count("src")) {
+    return install_file(res);
   }
 
   return 0;
