@@ -2,6 +2,8 @@ project('ToyOS' , 'c', 'cpp')
 
 nasm = find_program('nasm', required: true)
 
+prog_python = import('python').find_installation('python3')
+
 nasm_c = generator(nasm,
   output : '@BASENAME@.o',
   arguments : [
@@ -20,3 +22,12 @@ subdir('apps')
 subdir('tools')
 
 
+qemu_script = files('run_qemu.py')
+
+run_qemu = run_target(
+  'run_qemu',
+  depends: [ install_boot, install_limine_sys, install_limine_cfg, install_kernel ],
+  command: [
+    prog_python, qemu_script, mk_disk_img
+  ]
+)
