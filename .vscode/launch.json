@@ -37,7 +37,7 @@
             "program": "${workspaceFolder}/build/tools/ext4_file_tool",
             "args": [
                 "-f",
-                "${workspaceFolder}/build/tools/disk.img",
+                "${workspaceFolder}/build/tools/ext4_disk.img",
                 "-s",
                 "${workspaceFolder}/common/limine/extern/limine.sys",
                 "-d",

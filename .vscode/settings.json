@@ -17,4 +17,7 @@
     "--compile-commands-dir=build",
   ],
   "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8"
+  },
 }
