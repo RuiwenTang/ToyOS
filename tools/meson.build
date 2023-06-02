@@ -22,42 +22,42 @@ ext4_file_tool = executable(
 mk_disk_img = custom_target(
   'mk_disk_img',
   output: 'ext4_disk.img',
-  input: [  ],
+  input: [ 'gen_disk.py' ],
   command: [
-    ext4_file_tool, '-f', '@OUTPUT@', '-t', 'ext4'
+    prog_python, '@INPUT@', ext4_file_tool, '@OUTPUT@', limine_deploy, limine_sys, limine_cfg, kernel_sys
   ]
 )
 
-install_boot = custom_target(
-  'install_boot',
-  output: 'install_limine_boot.ini',
-  command: [
-    limine_deploy, mk_disk_img
-  ]
-)
+# install_boot = custom_target(
+#   'install_boot',
+#   output: 'install_limine_boot.ini',
+#   command: [
+#     limine_deploy, mk_disk_img
+#   ]
+# )
 
-install_limine_sys = custom_target(
-  'install_limine_sys',
-  output: 'install_limine_sys.ini',
-  command: [
-    ext4_file_tool, '-f', mk_disk_img, '-s', limine_sys, '-d', '/boot/limine.sys'
-  ]
-)
+# install_limine_sys = custom_target(
+#   'install_limine_sys',
+#   output: 'install_limine_sys.ini',
+#   command: [
+#     ext4_file_tool, '-f', mk_disk_img, '-s', limine_sys, '-d', '/boot/limine.sys'
+#   ]
+# )
 
-install_limine_cfg = custom_target(
-  'install_limine_cfg',
-  output: 'install_limine_cfg.ini',
-  command: [
-    ext4_file_tool, '-f', mk_disk_img, '-s', limine_cfg, '-d', '/boot/limine.cfg'
-  ]
-)
+# install_limine_cfg = custom_target(
+#   'install_limine_cfg',
+#   output: 'install_limine_cfg.ini',
+#   command: [
+#     ext4_file_tool, '-f', mk_disk_img, '-s', limine_cfg, '-d', '/boot/limine.cfg'
+#   ]
+# )
 
-install_kernel = custom_target(
-  'install_kernel',
-  output: 'install_kernel.ini',
-  command: [
-    ext4_file_tool, '-f', mk_disk_img, '-s', kernel_sys, '-d', '/boot/kernel.sys'
-  ]
-)
+# install_kernel = custom_target(
+#   'install_kernel',
+#   output: 'install_kernel.ini',
+#   command: [
+#     ext4_file_tool, '-f', mk_disk_img, '-s', kernel_sys, '-d', '/boot/kernel.sys'
+#   ]
+# )
 
 

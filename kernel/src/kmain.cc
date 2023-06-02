@@ -2,7 +2,6 @@
 #include <boot/multiboot.h>
 #include <driver/pci/ide.h>
 #include <driver/pci/pci.h>
-#include <ff.h>
 
 #include "elf/elf_loader.hpp"
 #include "fs/vfs.h"
@@ -64,19 +63,6 @@ extern "C" uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
   system_init(mb_info, esp);
 
   x86_enable_interrupt();
-
-  FATFS* fs = (FATFS*)kmalloc(sizeof(FATFS));
-  FRESULT res = f_mount(fs, "", 1);
-
-  if (res != FR_OK) {
-    kprintf("kernel failed mount file system \n");
-    return 2;
-  }
-
-  if (load_and_exec("system/init") != 0) {
-    kprintf("Failed start init process\n");
-    return 3;
-  }
 
   while (1)
     ;

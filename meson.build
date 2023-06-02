@@ -26,7 +26,6 @@ qemu_script = files('run_qemu.py')
 
 run_qemu = run_target(
   'run_qemu',
-  depends: [ install_boot, install_limine_sys, install_limine_cfg, install_kernel ],
   command: [
     prog_python, qemu_script, mk_disk_img
   ]
