@@ -1,5 +1,4 @@
 #include <elf/elf.h>
-#include <ff.h>
 
 #include "mmu/heap.h"
 
@@ -7,7 +6,6 @@
 
 typedef struct {
   Elf32_File base;
-  FIL* ff_file;
 } SYSElf_File;
 
 static int sys_elf_seek(Elf32_File* file, uint32_t offset) {

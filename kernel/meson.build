@@ -20,12 +20,6 @@ kernel_src = [
   'klibc/string.h',
   'src/driver/pci/ide.c',
   'src/driver/pci/pci.c',
-  'src/elf/elf_impl.c',
-  'src/elf/elf_loader.cc',
-  'src/elf/elf_loader.hpp',
-  'src/elf/elf_obj_impl.cc',
-  'src/elf/elf_obj_impl.hpp',
-  'src/fs/fatfs_backend.c',
   'src/fs/mem/mem_fs.c',
   'src/fs/mem/mem_fs.h',
   'src/fs/vfs.c',
@@ -94,7 +88,7 @@ kernel_sys = executable(
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
     cpp_args: kernel_cpp_args,
-    dependencies: [toy_boot, umm_malloc, fatfs_dep, elf_dep],
+    dependencies: [toy_boot, umm_malloc],
 )
 
 gtest = subproject('gtest').get_variable('gtest_dep')
