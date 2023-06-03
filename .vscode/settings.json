@@ -21,4 +21,5 @@
     "editor.defaultFormatter": "ms-python.python"
   },
   "python.formatting.provider": "none",
+  "C_Cpp.default.compileCommands": "build/vscode_compile_commands.json",
 }

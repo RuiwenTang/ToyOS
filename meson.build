@@ -30,3 +30,10 @@ run_qemu = run_target(
     prog_python, qemu_script, mk_disk_img
   ]
 )
+
+run_qemu_debug = run_target(
+  'run_qemu_debug',
+  command: [
+    prog_python, qemu_script, mk_disk_img, '-d'
+  ]
+)
