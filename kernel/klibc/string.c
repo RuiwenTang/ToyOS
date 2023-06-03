@@ -114,9 +114,9 @@ char* strncpy(char* dest, const char* src, size_t n) {
   return dest;
 }
 
-size_t strlen(const char* const s) {
-  const char* p = s;
-  while (*p++ != '\0') {
-  }
-  return p - s;
+size_t strlen(const char* str) {
+  size_t i = 0;
+  for (; str[i] != '\0'; i++)
+    ;
+  return i;
 }

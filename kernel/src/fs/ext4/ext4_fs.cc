@@ -55,7 +55,15 @@ extern "C" int32_t ide_dev_bread(ext4_blockdev* bdev, void* buf,
 
 extern "C" int32_t ide_dev_bwrite(ext4_blockdev* bdev, const void* buf,
                                   uint64_t blk_id, uint32_t blk_cnt) {
-  return ENODEV;
+  if (g_device == nullptr) {
+    return ENODEV;
+  }
+
+  if (ide_ata_access(1, g_device_index, blk_id, blk_cnt, (uint8_t*)buf)) {
+    return ENODEV;
+  }
+
+  return EOK;
 }
 
 extern "C" int32_t ide_dev_close(ext4_blockdev* bdev) { return EOK; }
@@ -102,18 +110,38 @@ Ext4FSNode* Ext4FSNode::Mount(char* name) {
     return nullptr;
   }
 
+  // regist this dev
+  r = ext4_device_register(&g_mbr_bdevs.partitions[0], "ext4_fs");
+  if (r != EOK) {
+    return nullptr;
+  }
+  // mount
+  r = ext4_mount("ext4_fs", "/", false);
+  if (r != EOK) {
+    return nullptr;
+  }
+
   g_root_ext4_node = new Ext4FSNode(name, &g_mbr_bdevs.partitions[0]);
 
   return g_root_ext4_node;
 }
 
-Ext4FSNode::Ext4FSNode(char* name, ext4_blockdev* dev)
+Ext4FSNode::Ext4FSNode(const char* name, ext4_blockdev* dev)
     : Node(name, 0, 0), m_blockdev(dev) {
   SetSize(m_blockdev->part_size - m_blockdev->part_offset);
 }
 
 Node* Ext4FSNode::Open(const char* name, uint32_t flags, uint32_t mode) {
-  return nullptr;
+  ext4_file* file = new ext4_file;
+
+  auto r = ext4_fopen(file, name, "r");
+
+  if (r != EOK) {
+    delete file;
+    return nullptr;
+  }
+
+  return new Ext4FileNode(name, file);
 }
 
 uint32_t Ext4FSNode::Read(uint32_t offset, uint32_t size, uint8_t* buf) {
@@ -127,5 +155,48 @@ uint32_t Ext4FSNode::Write(uint32_t offset, uint32_t size, uint8_t* buf) {
 bool Ext4FSNode::Seek(uint32_t offset) { return false; }
 
 void Ext4FSNode::Close() {}
+
+// -----------------------------------------------------------------------------
+
+Ext4FileNode::Ext4FileNode(const char* name, ext4_file* file)
+    : Node(name, 0, 0), m_file(file) {}
+
+Ext4FileNode::~Ext4FileNode() {
+  if (m_file != nullptr) {
+    ext4_fclose(m_file);
+
+    delete m_file;
+  }
+}
+
+uint32_t Ext4FileNode::Read(uint32_t offset, uint32_t size, uint8_t* buf) {
+  size_t cnt = 0;
+  auto ret = ext4_fread(m_file, buf, size, &cnt);
+
+  if (ret != EOK) {
+    return 0;
+  }
+
+  return cnt;
+}
+
+uint32_t Ext4FileNode::Write(uint32_t offset, uint32_t size, uint8_t* buf) {
+  // TODO: Implement this function
+  return 0;
+}
+
+bool Ext4FileNode::Seek(uint32_t offset) {
+  auto ret = ext4_fseek(m_file, offset, SEEK_SET);
+
+  return ret == EOK;
+}
+
+void Ext4FileNode::Close() {
+  if (m_file) {
+    ext4_fclose(m_file);
+
+    delete m_file;
+  }
+}
 
 }  // namespace fs

@@ -22,6 +22,25 @@ subdir('apps')
 subdir('tools')
 
 
+# Generate disk image
+mk_disk_img = custom_target(
+  'mk_disk_img',
+  output: 'ext4_disk.img',
+  input: [ 'tools/gen_disk.py' ],
+  command: [
+    prog_python,
+    '@INPUT@',
+    ext4_file_tool,
+    '@OUTPUT@',
+    limine_deploy,
+    limine_sys,
+    limine_cfg,
+    kernel_sys,
+    init_bin,
+  ]
+)
+
+
 qemu_script = files('run_qemu.py')
 
 run_qemu = run_target(
@@ -37,3 +56,4 @@ run_qemu_debug = run_target(
     prog_python, qemu_script, mk_disk_img, '-d'
   ]
 )
+

@@ -32,6 +32,19 @@ def install_file_to_disk(tool, disk_path, src_file, dst_path):
 
     return subprocess.call([tool, "-f", disk_path, "-s", src_file, "-d", dst_path])
 
+def install_app(tool, disk_path, app_path):
+    if not os.path.exists(disk_path):
+        return 1
+
+    if not os.path.exists(app_path):
+        return 1
+    
+    # get file name
+    file_name = os.path.basename(app_path)
+
+    dst_path = os.path.join("/system/app", file_name)
+
+    return subprocess.call([tool, "-f", disk_path, "-s", app_path, '-d', dst_path])
 
 if __name__ == "__main__":
     print(sys.argv)
@@ -70,10 +83,10 @@ if __name__ == "__main__":
         print("Failed install kernel")
         sys.exit(1)
 
-    # subprocess.call(['echo', 'run disk'])
-    # subprocess.call([sys.argv[1], sys.argv[len(sys.argv) - 1],
-    #                 sys.argv[2],  # limine.sys
-    #                 sys.argv[3],  # limine.cfg
-    #                 sys.argv[4]],  # kernel.sys
-    #                 )
+    # all args after sys.argv[6] is uer app
+    for i in range(7, len(sys.argv)):
+        ret = install_app(tool, disk_path, sys.argv[i])
+        if ret != 0:
+            print("Failed to install app: {}".format(sys.argv[i]))
+            sys.exit(1)
     sys.exit(0)
