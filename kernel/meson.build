@@ -19,10 +19,13 @@ kernel_src = [
   'klibc/stdio.h',
   'klibc/string.c',
   'klibc/string.h',
+  'klibc/stdlib.h',
+  'klibc/stdlib.c',
   'src/driver/pci/ide.c',
   'src/driver/pci/pci.c',
   'src/fs/mem/mem_fs.cc',
   'src/fs/mem/mem_fs.hpp',
+  'src/fs/ext4/ext4_fs.cc',
   'src/fs/vfs.cc',
   'src/fs/vfs.hpp',
   'src/kmain.cc',
@@ -60,6 +63,7 @@ kernel_c_flags = [
   '-ffreestanding',
   '-fno-builtin',
   '-nostdlib',
+  '-DCONFIG_USE_USER_MALLOC=1',
 ]
 
 kernel_cpp_args = [
@@ -89,7 +93,7 @@ kernel_sys = executable(
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
     cpp_args: kernel_cpp_args,
-    dependencies: [toy_boot, umm_malloc],
+    dependencies: [toy_boot, umm_malloc, ext2fs_dep],
 )
 
 gtest = subproject('gtest').get_variable('gtest_dep')

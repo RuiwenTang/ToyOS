@@ -29,6 +29,8 @@ class Node {
 
   virtual Node* Open(const char* name, uint32_t flags, uint32_t mode) = 0;
 
+  virtual void Close() = 0;
+
   virtual uint32_t Read(uint32_t offset, uint32_t size, uint8_t* buf) = 0;
 
   virtual uint32_t Write(uint32_t offset, uint32_t size, uint8_t* buf) = 0;
@@ -40,6 +42,12 @@ class Node {
   uint32_t m_flags;
   uint32_t m_mode;
   uint32_t m_size;
+
+  // List in parent children
+  Node* prev_in_parent = nullptr;
+  Node* next_in_parent = nullptr;
+
+  friend class RootFSNode;
 };
 
 }  // namespace fs
