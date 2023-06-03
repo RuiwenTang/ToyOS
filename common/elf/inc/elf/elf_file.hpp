@@ -35,6 +35,12 @@ class ElfFile {
    */
   bool EnumPhdr(Elf32_Phdr* header, uint32_t* count);
 
+  uint32_t GetEntryPoint() const;
+
+  bool Seek(uint32_t offset);
+
+  bool Read(char* buf, uint32_t size);
+
  protected:
   virtual bool OnOpen(const char* file_name) = 0;
 

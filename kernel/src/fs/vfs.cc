@@ -41,13 +41,9 @@ class RootFSNode : public Node {
     return nullptr;
   }
 
-  uint32_t Read(uint32_t offset, uint32_t size, uint8_t* buf) override {
-    return 0;
-  }
+  uint32_t Read(uint32_t size, uint8_t* buf) override { return 0; }
 
-  uint32_t Write(uint32_t offset, uint32_t size, uint8_t* buf) override {
-    return 0;
-  }
+  uint32_t Write(uint32_t size, uint8_t* buf) override { return 0; }
 
   bool Seek(uint32_t offset) override { return false; }
 

@@ -116,7 +116,7 @@ Ext4FSNode* Ext4FSNode::Mount(char* name) {
     return nullptr;
   }
   // mount
-  r = ext4_mount("ext4_fs", "/", false);
+  r = ext4_mount("ext4_fs", "/", true);
   if (r != EOK) {
     return nullptr;
   }
@@ -144,13 +144,9 @@ Node* Ext4FSNode::Open(const char* name, uint32_t flags, uint32_t mode) {
   return new Ext4FileNode(name, file);
 }
 
-uint32_t Ext4FSNode::Read(uint32_t offset, uint32_t size, uint8_t* buf) {
-  return 0;
-}
+uint32_t Ext4FSNode::Read(uint32_t size, uint8_t* buf) { return 0; }
 
-uint32_t Ext4FSNode::Write(uint32_t offset, uint32_t size, uint8_t* buf) {
-  return 0;
-}
+uint32_t Ext4FSNode::Write(uint32_t size, uint8_t* buf) { return 0; }
 
 bool Ext4FSNode::Seek(uint32_t offset) { return false; }
 
@@ -169,7 +165,7 @@ Ext4FileNode::~Ext4FileNode() {
   }
 }
 
-uint32_t Ext4FileNode::Read(uint32_t offset, uint32_t size, uint8_t* buf) {
+uint32_t Ext4FileNode::Read(uint32_t size, uint8_t* buf) {
   size_t cnt = 0;
   auto ret = ext4_fread(m_file, buf, size, &cnt);
 
@@ -180,7 +176,7 @@ uint32_t Ext4FileNode::Read(uint32_t offset, uint32_t size, uint8_t* buf) {
   return cnt;
 }
 
-uint32_t Ext4FileNode::Write(uint32_t offset, uint32_t size, uint8_t* buf) {
+uint32_t Ext4FileNode::Write(uint32_t size, uint8_t* buf) {
   // TODO: Implement this function
   return 0;
 }

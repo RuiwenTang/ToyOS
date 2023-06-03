@@ -52,6 +52,10 @@ extern "C" uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
 
   x86_enable_interrupt();
 
+  if (load_and_exec("/system/app/init.bin") != 0) {
+    return 3;
+  }
+
   while (1)
     ;
 

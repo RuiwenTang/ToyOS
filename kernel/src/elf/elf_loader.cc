@@ -1,8 +1,8 @@
 #include "src/elf/elf_loader.hpp"
 
-#include <elf/elf.h>
 #include <string.h>
 
+#include "elf/elf_file_impl.hpp"
 #include "kprintf.h"
 #include "mmu/heap.h"
 #include "proc/proc.h"
@@ -11,35 +11,34 @@
 #define ELF_DEBUG 1
 
 int load_and_exec(const char* path) {
-  Elf32_File* elf_file = elf_open_file(path);
+  ElfFileImpl impl;
 
-  if (elf_file == NULL) {
+  if (!impl.Open(path)) {
 #ifdef ELF_DEBUG
     kprintf("Can not open executable at: %s \n", path);
 #endif
     return 1;
   }
 
-  if (elf_check_valid(elf_file) != 0) {
+  if (!impl.IsValid()) {
 #ifdef ELF_DEBUG
     kprintf("file: %s is not executable \n", path);
 #endif
-    elf_close_file(elf_file);
     return 2;
   }
 
   uint32_t ph_count = 0;
 
-  elf_enum_phdr(elf_file, NULL, &ph_count);
+  impl.EnumPhdr(nullptr, &ph_count);
   if (ph_count == 0) {
 #ifdef ELF_DEBUG
     kprintf("file: %s contaons no program headers\n");
 #endif
-    elf_close_file(elf_file);
     return 3;
   }
   Elf32_Phdr* p_headers = (Elf32_Phdr*)kmalloc(ph_count * sizeof(Elf32_Phdr));
-  elf_enum_phdr(elf_file, p_headers, &ph_count);
+
+  impl.EnumPhdr(p_headers, &ph_count);
 
   uint32_t total_size = p_headers[ph_count - 1].p_vaddr +
                         p_headers[ph_count - 1].p_memsz - p_headers[0].p_vaddr;
@@ -57,7 +56,7 @@ int load_and_exec(const char* path) {
   proc->regs.fs = USER_DATA_SELECTOR;
   proc->regs.ss = USER_DATA_SELECTOR;
   proc->regs.gs = USER_DATA_SELECTOR;
-  proc->regs.eip = elf_file->header.e_entry;
+  proc->regs.eip = impl.GetEntryPoint();
   proc->regs.esp = proc->stack_top;
   proc->regs.eflags = 0x1202;
 
@@ -70,8 +69,8 @@ int load_and_exec(const char* path) {
       continue;
     }
 
-    elf_file->impl_seek(elf_file, p_headers[i].p_offset);
-    elf_file->impl_read(elf_file, (char*)p_addr, p_headers[i].p_filesz);
+    impl.Seek(p_headers[i].p_offset);
+    impl.Read((char*)p_addr, p_headers[i].p_filesz);
 
     if (p_headers[i].p_filesz < p_headers[i].p_memsz) {
       memset((void*)(p_addr + p_headers[i].p_filesz), 0,
@@ -81,7 +80,8 @@ int load_and_exec(const char* path) {
 
   // clean up
   kfree(p_headers);
-  elf_close_file(elf_file);
+
+  impl.Close();
 
   switch_to_ready(proc);
   proc_switch();

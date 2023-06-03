@@ -39,6 +39,30 @@ bool ElfFile::EnumPhdr(Elf32_Phdr* header, uint32_t* count) {
   return true;
 }
 
+uint32_t ElfFile::GetEntryPoint() const {
+  if (!IsValid()) {
+    return 0;
+  }
+
+  return m_elf_header.e_entry;
+}
+
+bool ElfFile::Seek(uint32_t offset) {
+  if (!IsValid()) {
+    return false;
+  }
+
+  return OnSeek(offset);
+}
+
+bool ElfFile::Read(char* buf, uint32_t size) {
+  if (!IsValid()) {
+    return false;
+  }
+
+  return OnRead(buf, size);
+}
+
 bool ElfFile::CheckValid() {
   this->OnSeek(0);
 

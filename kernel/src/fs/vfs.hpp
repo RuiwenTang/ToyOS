@@ -31,9 +31,9 @@ class Node {
 
   virtual void Close() = 0;
 
-  virtual uint32_t Read(uint32_t offset, uint32_t size, uint8_t* buf) = 0;
+  virtual uint32_t Read(uint32_t size, uint8_t* buf) = 0;
 
-  virtual uint32_t Write(uint32_t offset, uint32_t size, uint8_t* buf) = 0;
+  virtual uint32_t Write(uint32_t size, uint8_t* buf) = 0;
 
   virtual bool Seek(uint32_t offset) = 0;
 
