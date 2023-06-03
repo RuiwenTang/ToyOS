@@ -37,6 +37,11 @@ class Node {
 
   virtual bool Seek(uint32_t offset) = 0;
 
+  static Node* GetRootNode();
+
+ protected:
+  void SetSize(uint32_t size) { m_size = size; }
+
  private:
   char m_name[128];
   uint32_t m_flags;

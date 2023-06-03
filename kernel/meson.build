@@ -26,6 +26,7 @@ kernel_src = [
   'src/fs/mem/mem_fs.cc',
   'src/fs/mem/mem_fs.hpp',
   'src/fs/ext4/ext4_fs.cc',
+  'src/fs/ext4/ext4_fs.hpp',
   'src/fs/vfs.cc',
   'src/fs/vfs.hpp',
   'src/kmain.cc',
