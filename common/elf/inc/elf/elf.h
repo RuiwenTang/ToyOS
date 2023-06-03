@@ -477,28 +477,28 @@ typedef struct elf32_rel {
 #define R_386_RELATIVE 8
 #define R_386_TLS_TPOFF 14
 
-// abstract elf file reading and writing
-struct Elf32_File;
+// // abstract elf file reading and writing
+// struct Elf32_File;
 
-typedef int (*ef_seek)(struct Elf32_File*, uint32_t offset);
-typedef int (*ef_read)(struct Elf32_File*, char* buf, uint32_t size);
+// typedef int (*ef_seek)(struct Elf32_File*, uint32_t offset);
+// typedef int (*ef_read)(struct Elf32_File*, char* buf, uint32_t size);
 
-typedef struct Elf32_File {
-  Elf32_Ehdr header;
-  ef_seek impl_seek;
-  ef_read impl_read;
-} Elf32_File;
+// typedef struct Elf32_File {
+//   Elf32_Ehdr header;
+//   ef_seek impl_seek;
+//   ef_read impl_read;
+// } Elf32_File;
 
-// backend implement functions
-Elf32_File* elf_open_file(const char* path);
+// // backend implement functions
+// Elf32_File* elf_open_file(const char* path);
 
-int elf_close_file(Elf32_File* file);
+// int elf_close_file(Elf32_File* file);
 
-int elf_check_valid(Elf32_File* file);
+// int elf_check_valid(Elf32_File* file);
 
-int elf_enum_phdr(Elf32_File* file, Elf32_Phdr* headers, uint32_t* count);
+// int elf_enum_phdr(Elf32_File* file, Elf32_Phdr* headers, uint32_t* count);
 
-int elf_enum_shdr(Elf32_File* file, Elf32_Shdr* sections, uint32_t* count);
+// int elf_enum_shdr(Elf32_File* file, Elf32_Shdr* sections, uint32_t* count);
 
 #ifdef __cplusplus
 }

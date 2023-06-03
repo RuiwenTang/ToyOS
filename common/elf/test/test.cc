@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#include "elf_file_host.hpp"
+
 struct MemoryBlock {
   uint32_t base;
   std::vector<char> mem;
@@ -26,146 +28,40 @@ const char* get_p_addr(uint32_t v_addr) {
   return nullptr;
 }
 
-int32_t find_global_symbol_table(std::vector<Elf32_Shdr> const& headers) {
-  for (int32_t i = 0; i < headers.size(); i++) {
-    if (headers[i].sh_type == SHT_DYNSYM) {
-      return i;
-    }
-  }
-
-  return -1;
-}
-
-void load_p_headers(Elf32_File* elf_file,
-                    std::vector<Elf32_Phdr> const& headers) {
-  for (auto const& p_head : headers) {
-    if (p_head.p_type == PT_LOAD) {
-      std::cout << "load file at : [" << std::hex << p_head.p_paddr
-                << "] with size:  " << std::hex << p_head.p_memsz << std::endl;
-
-      MemoryBlock block;
-      block.base = p_head.p_paddr;
-      block.mem.resize(p_head.p_memsz);
-
-      elf_file->impl_seek(elf_file, p_head.p_offset);
-      elf_file->impl_read(elf_file, block.mem.data(), p_head.p_filesz);
-
-      g_memory.emplace_back(block);
-    }
-  }
-}
-
-void check_dynamic_table(Elf32_File* elf_file,
-                         std::vector<Elf32_Phdr> const& headers) {
-  const char* string_table = nullptr;
-  for (auto const& p_head : headers) {
-    if (p_head.p_type == PT_DYNAMIC) {
-      uint32_t dyn_count = p_head.p_filesz / sizeof(Elf32_Dyn);
-      std::cout << "dynamic header with : [" << dyn_count << "] table count"
-                << std::endl;
-
-      std::vector<Elf32_Dyn> dyns(dyn_count);
-
-      elf_file->impl_seek(elf_file, p_head.p_offset);
-      elf_file->impl_read(elf_file, (char*)dyns.data(), p_head.p_filesz);
-
-      for (auto const& dyn : dyns) {
-        if (dyn.d_tag == DT_STRTAB) {
-          std::cout << "string table at : " << std::hex << dyn.d_un.d_val
-                    << std::endl;
-          string_table = get_p_addr(dyn.d_un.d_val);
-          g_string_table = dyn.d_un.d_val;
-        } else if (dyn.d_tag == DT_SYMTAB) {
-          std::cout << "symbol table at : " << std::hex << dyn.d_un.d_val
-                    << std::endl;
-          g_symbol_table = dyn.d_un.d_val;
-        } else if (dyn.d_tag == DT_HASH) {
-          uint32_t* p = (uint32_t*)get_p_addr(dyn.d_un.d_val);
-          std::cout << "symbol table size at = " << std::hex << dyn.d_un.d_val
-                    << std::endl;
-          std::cout << "symbol table size = " << p[1] << std::endl;
-        } else if (dyn.d_tag == DT_STRSZ) {
-          std::cout << "string table size = " << dyn.d_un.d_val << std::endl;
-        } else if (dyn.d_tag == DT_INIT) {
-          std::cout << "init func at " << dyn.d_un.d_val << std::endl;
-        }
-      }
-
-      for (auto const& dyn : dyns) {
-        if (dyn.d_tag == DT_NEEDED) {
-          std::cout << "need lib: [" << (string_table + dyn.d_un.d_val) << "]"
-                    << std::endl;
-        } else if (dyn.d_tag == DT_RPATH) {
-          std::cout << "rpath : [" << (string_table + dyn.d_un.d_val) << "]"
-                    << std::endl;
-        }
-      }
-    }
-  }
-}
-
-void read_copy_relocation(Elf32_File* elf_file) {
-  std::vector<Elf32_Shdr> s_hdrs;
-  uint32_t s_shrs_count = 0;
-
-  elf_enum_shdr(elf_file, nullptr, &s_shrs_count);
-  s_hdrs.resize(s_shrs_count);
-  elf_enum_shdr(elf_file, s_hdrs.data(), &s_shrs_count);
-
-  for (auto const& sh : s_hdrs) {
-    if (sh.sh_type == SHT_REL) {
-      uint32_t rel_count = sh.sh_size / sizeof(Elf32_Rel);
-      std::cout << "rel table at: " << std::hex << sh.sh_addr << std::endl;
-      std::cout << "rel table count: [" << rel_count << "]" << std::endl;
-
-      Elf32_Rel* rel_t = (Elf32_Rel*)get_p_addr(sh.sh_addr);
-
-      for (uint32_t i = 0; i < rel_count; i++) {
-        std::cout << "rel info = " << rel_t[i].r_info << std::endl;
-        uint32_t r_type = ELF32_R_TYPE(rel_t[i].r_info);
-        std::cout << "rel type = " << r_type << std::endl;
-        if (r_type == R_386_COPY) {
-          auto sym_table = (Elf32_Sym*)get_p_addr(g_symbol_table);
-          uint32_t sym_index = ELF32_R_SYM(rel_t[i].r_info);
-          std::cout << "sym_index = " << sym_index << std::endl;
-
-          char* string_table = (char*)get_p_addr(g_string_table);
-          char* name = string_table + sym_table[sym_index].st_name;
-
-          std::cout << "symble name = " << name << std::endl;
-        }
-      }
-    }
-  }
-}
-
 int main(int argc, const char** argv) {
-  Elf32_File* elf_file = elf_open_file(argv[1]);
-
-  if (elf_file == nullptr) {
-    std::cerr << "failed open elf file: " << argv[1] << std::endl;
-
-    return -1;
-  }
-
-  if (elf_check_valid(elf_file) != 0) {
-    std::cerr << "Elf header check failed" << std::endl;
-    return -2;
-  }
-
   std::vector<Elf32_Phdr> p_hdrs;
   uint32_t p_hdrs_count = 0;
 
-  elf_enum_phdr(elf_file, nullptr, &p_hdrs_count);
+  test::ElfFileHost elf_file{};
+
+  if (!elf_file.Open(argv[1])) {
+    std::cerr << "cannot open " << argv[1] << std::endl;
+    return 1;
+  }
+
+  if (!elf_file.IsValid()) {
+    std::cerr << "invalid elf file" << std::endl;
+    return 1;
+  }
+
+  if (!elf_file.EnumPhdr(nullptr, &p_hdrs_count)) {
+    std::cerr << "cannot enumerate program headers" << std::endl;
+    return 1;
+  }
+
   p_hdrs.resize(p_hdrs_count);
-  elf_enum_phdr(elf_file, p_hdrs.data(), &p_hdrs_count);
 
-  load_p_headers(elf_file, p_hdrs);
-  check_dynamic_table(elf_file, p_hdrs);
+  if (!elf_file.EnumPhdr(&p_hdrs[0], &p_hdrs_count)) {
+    std::cerr << "cannot enumerate program headers" << std::endl;
+    return 1;
+  }
 
-  read_copy_relocation(elf_file);
-
-  elf_close_file(elf_file);
+  for (auto const& phdr : p_hdrs) {
+    std::cout << std::hex << phdr.p_type << " " << phdr.p_offset << " "
+              << phdr.p_vaddr << " " << phdr.p_paddr << " " << phdr.p_filesz
+              << " " << phdr.p_memsz << " " << phdr.p_flags << " "
+              << phdr.p_align << std::endl;
+  }
 
   return 0;
 }

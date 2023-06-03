@@ -88,12 +88,12 @@
             "MIMode": "lldb"
         },
         {
-            "name": "host_elf_test",
+            "name": "elf_test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/common/elf/host_elf_test",
+            "program": "${workspaceFolder}/build/common/elf/elf_test",
             "args": [
-                "${workspaceFolder}/build/apps/system_server/init/init.dl"
+                "${workspaceFolder}/build/apps/system_server/init/init.bin"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
