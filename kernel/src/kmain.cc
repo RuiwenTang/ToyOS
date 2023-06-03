@@ -4,7 +4,7 @@
 #include <driver/pci/pci.h>
 
 #include "elf/elf_loader.hpp"
-#include "fs/vfs.h"
+#include "fs/vfs.hpp"
 #include "kprintf.h"
 #include "mmu/heap.h"
 #include "mmu/page.h"
@@ -28,19 +28,7 @@ void system_init(multiboot_info_t* info, uint32_t stack) {
   sys_call_init();
   pci_init();
 
-  vfs_init();
-}
-
-void task_a() {
-  kprintf("^");
-
-  uint32_t j = 0;
-  while (1) {
-    kprintf("%d", j);
-    j++;
-    for (uint32_t i = 0; i < 100000000; i++)
-      ;
-  }
+  fs::Init();
 }
 
 extern "C" uint32_t kernel_main(uint32_t esp, uint32_t eax, uint32_t ebx) {
