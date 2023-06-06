@@ -3,6 +3,7 @@
 #include <driver/pci/ide.h>
 #include <driver/pci/pci.h>
 
+#include "acpi/acpi.hpp"
 #include "elf/elf_loader.hpp"
 #include "fs/vfs.hpp"
 #include "kprintf.h"
@@ -27,6 +28,8 @@ void system_init(multiboot_info_t* info, uint32_t stack) {
   timer_init();
   sys_call_init();
   pci_init();
+
+  toy::ACPI::Initialize();
 
   fs::Init();
 }

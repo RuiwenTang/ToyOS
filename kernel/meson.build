@@ -3,6 +3,10 @@
 buildin_font_inc = subproject('font8x8').get_variable('font8x8_incdir')
 umm_malloc = subproject('umm_malloc').get_variable('umm_malloc_dep')
 
+# lai
+lai_inc = subproject('lai').get_variable('includes')
+lai_source = subproject('lai').get_variable('sources')
+
 kernel_src = [
   nasm_c.process([
     'src/boot/entry.asm',
@@ -21,6 +25,9 @@ kernel_src = [
   'klibc/string.h',
   'klibc/stdlib.h',
   'klibc/stdlib.c',
+  'src/acpi/acpi.hpp',
+  'src/acpi/acpi.cc',
+  'src/acpi/lai_port.c',
   'src/driver/pci/ide.c',
   'src/driver/pci/pci.c',
   'src/elf/elf_file_impl.cc',
@@ -88,12 +95,13 @@ kernel_link_args = [
 
 kernel_sys = executable(
     'kernel.sys',
-    sources: kernel_src,
+    sources: [kernel_src, lai_source ],
     include_directories: [
       './src',
       'klibc',
       'include',
       buildin_font_inc,
+      lai_inc,
     ],
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
