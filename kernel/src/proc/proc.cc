@@ -6,49 +6,45 @@
 #include "mmu/heap.h"
 #include "mmu/page.h"
 #include "mmu/palloc.h"
+#include "util/list.hpp"
 
 #define PROC_MEMORY_BASE 0x80000000
 // 1 for PTD and 4 for PT init memory is 16MB
 #define PROC_PAGE_MAP_SIZE (0x1000 * 5)
 #define PROC_STACK_SIZE (0x1000 * 2)
 
+typedef struct proc {
+  StackFrame regs;
+  int32_t ticks;
+  uint32_t pid;
+
+  uint32_t mapd_base;
+  uint32_t mapd_length;
+  uint32_t page_table;
+
+  uint32_t stack_top;
+
+  MemoryRegion* memory;
+
+  proc* ready_prev;
+  proc* ready_next;
+  proc* suspend_prev;
+  proc* suspend_next;
+} Proc;
+
 Proc* current_proc = NULL;
-Proc* suspend_list = NULL;
+
+util::List<Proc> suspend_list{};
+util::List<Proc> ready_list{};
 
 uint32_t proc_count = 0;
 
 typedef Proc*(list_get_next)(Proc*);
 typedef void(list_set_next)(Proc*, Proc*);
 
-static Proc* suspend_list_get_next(Proc* p) { return p->suspend_next; }
-
-static Proc* ready_list_get_next(Proc* p) { return p->ready_next; }
-
-static void suspend_list_set_next(Proc* p, Proc* next) {
-  p->suspend_next = next;
-}
-
-static void ready_list_set_next(Proc* p, Proc* next) { p->ready_next = next; }
+extern "C" {
 
 static void proc_insert_memory_region(Proc* proc, MemoryRegion* region);
-
-static Proc* remove_from_list(Proc* list, Proc* item, list_get_next,
-                              list_set_next);
-
-static Proc* insert_into_list(Proc* list, Proc* item, list_get_next,
-                              list_set_next);
-
-#define SUSPEND_INSERT(list, node) \
-  insert_into_list(list, node, suspend_list_get_next, suspend_list_set_next)
-
-#define SUSPEND_REMOVE(list, node) \
-  remove_from_list(list, node, suspend_list_get_next, suspend_list_set_next)
-
-#define READY_INSERT(list, node) \
-  insert_into_list(list, node, ready_list_get_next, ready_list_set_next)
-
-#define READY_REMOVE(list, node) \
-  remove_from_list(list, node, ready_list_get_next, ready_list_set_next)
 
 Proc* init_proc(uint32_t init_size) {
   init_size = SIZE_ALIGN_4K(init_size);
@@ -90,15 +86,36 @@ void proc_add_memory(Proc* proc, uint32_t base, uint32_t length) {
   proc_insert_memory_region(proc, region);
 }
 
-void suspend_proc(Proc* proc) { SUSPEND_INSERT(suspend_list, proc); }
-
-void switch_to_ready(Proc* proc) {
-  current_proc = READY_INSERT(current_proc, proc);
+void suspend_proc(Proc* proc) {
+  util::List<Proc>::Insert<&Proc::suspend_prev, &Proc::suspend_next>(
+      proc, suspend_list.tail, nullptr, &suspend_list.head, &suspend_list.tail);
 }
 
+void switch_to_ready(Proc* proc) {
+  util::List<Proc>::Insert<&Proc::ready_prev, &Proc::ready_next>(
+      proc, nullptr, ready_list.head, &ready_list.head, &ready_list.tail);
+
+  current_proc = ready_list.head;
+}
+
+StackFrame* proc_get_stackframe(Proc* proc) { return &proc->regs; }
+
+uint32_t proc_get_stacktop(Proc* proc) { return proc->stack_top; }
+
+uint32_t proc_get_page_table(Proc* proc) { return proc->page_table; }
+
+uint32_t proc_get_maped_base(Proc* proc) { return proc->mapd_base; }
+
+uint32_t proc_get_maped_length(Proc* proc) { return proc->mapd_length; }
+
 void proc_exit(Proc* proc) {
-  suspend_list = SUSPEND_REMOVE(suspend_list, proc);
-  current_proc = READY_REMOVE(current_proc, proc);
+  util::List<Proc>::Remove<&Proc::suspend_prev, &Proc::suspend_next>(
+      current_proc, &suspend_list.head, &suspend_list.tail);
+
+  util::List<Proc>::Remove<&Proc::ready_prev, &Proc::ready_next>(
+      current_proc, &ready_list.head, &ready_list.tail);
+
+  current_proc = ready_list.head;
 
   // free all allocated page
   while (proc->memory) {
@@ -209,3 +226,5 @@ void proc_switch() {
   page_load_proc(current_proc);
   proc_restart();
 }
+
+}  // extern "C"

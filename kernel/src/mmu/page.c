@@ -170,11 +170,11 @@ void page_map_screen(multiboot_info_t* info) {
 }
 
 void page_load_proc(Proc* p) {
-  uint32_t pd_count = (p->mapd_length / PD_SIZE) + 1;
+  uint32_t pd_count = (proc_get_maped_length(p) / PD_SIZE) + 1;
 
-  uint32_t pd_index = p->mapd_base / PD_SIZE;
+  uint32_t pd_index = proc_get_maped_base(p) / PD_SIZE;
 
-  uint32_t proc_pt = p->page_table;
+  uint32_t proc_pt = proc_get_page_table(p);
   for (uint32_t i = 0; i < pd_count; i++) {
     g_pd[pd_index + i].user = 1;
     g_pd[pd_index + i].rw = 1;

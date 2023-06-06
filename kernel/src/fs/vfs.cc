@@ -51,7 +51,7 @@ class RootFSNode : public Node {
 
   void RegisterChild(Node* child) {
     util::List<Node>::Insert<&Node::prev_in_parent, &Node::next_in_parent>(
-        child, m_children.head, nullptr, &m_children.head, &m_children.tail);
+        child, m_children.tail, nullptr, &m_children.head, &m_children.tail);
   }
 
  private:

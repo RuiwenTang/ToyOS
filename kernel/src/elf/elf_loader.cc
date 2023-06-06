@@ -50,15 +50,15 @@ int load_and_exec(const char* path) {
   Proc* proc = init_proc(total_size);
 
   // prepare proc regs
-  proc->regs.cs = USER_CODE_SELECTOR;
-  proc->regs.ds = USER_DATA_SELECTOR;
-  proc->regs.es = USER_DATA_SELECTOR;
-  proc->regs.fs = USER_DATA_SELECTOR;
-  proc->regs.ss = USER_DATA_SELECTOR;
-  proc->regs.gs = USER_DATA_SELECTOR;
-  proc->regs.eip = impl.GetEntryPoint();
-  proc->regs.esp = proc->stack_top;
-  proc->regs.eflags = 0x1202;
+  proc_get_stackframe(proc)->cs = USER_CODE_SELECTOR;
+  proc_get_stackframe(proc)->ds = USER_DATA_SELECTOR;
+  proc_get_stackframe(proc)->es = USER_DATA_SELECTOR;
+  proc_get_stackframe(proc)->fs = USER_DATA_SELECTOR;
+  proc_get_stackframe(proc)->ss = USER_DATA_SELECTOR;
+  proc_get_stackframe(proc)->gs = USER_DATA_SELECTOR;
+  proc_get_stackframe(proc)->eip = impl.GetEntryPoint();
+  proc_get_stackframe(proc)->esp = proc_get_stacktop(proc);
+  proc_get_stackframe(proc)->eflags = 0x1202;
 
   // copy app code and data
   for (uint32_t i = 0; i < ph_count; i++) {

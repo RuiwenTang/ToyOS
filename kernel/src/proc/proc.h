@@ -40,21 +40,9 @@ typedef struct stackframe {
   uint32_t ss;
 } StackFrame;
 
-typedef struct proc {
-  StackFrame regs;
-  int32_t ticks;
-  uint32_t pid;
+struct proc;
 
-  uint32_t mapd_base;
-  uint32_t mapd_length;
-  uint32_t page_table;
-
-  uint32_t stack_top;
-
-  MemoryRegion* memory;
-  struct proc* ready_next;
-  struct proc* suspend_next;
-} Proc;
+typedef struct proc Proc;
 
 /**
  * @brief alloc a process control block
@@ -73,6 +61,16 @@ void proc_add_memory(Proc* proc, uint32_t base, uint32_t length);
 void suspend_proc(Proc* proc);
 
 void switch_to_ready(Proc* proc);
+
+StackFrame* proc_get_stackframe(Proc* proc);
+
+uint32_t proc_get_stacktop(Proc* proc);
+
+uint32_t proc_get_page_table(Proc* proc);
+
+uint32_t proc_get_maped_base(Proc* proc);
+
+uint32_t proc_get_maped_length(Proc* proc);
 
 void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
                       uint32_t size);

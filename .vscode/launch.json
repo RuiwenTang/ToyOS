@@ -34,7 +34,7 @@
             "name": "ext4_file_tool",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/tools/ext4_file_tool",
+            "program": "${workspaceFolder}/build/ext4_file_tool",
             "args": [
                 "-f",
                 "${workspaceFolder}/build/tools/ext4_disk.img",
@@ -47,7 +47,7 @@
             "cwd": "${fileDirname}",
             "environment": [],
             "externalConsole": false,
-            "MIMode": "lldb"
+            "MIMode": "gdb"
         },
         {
             "name": "ext2_test",

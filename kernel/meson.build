@@ -42,7 +42,7 @@ kernel_src = [
   'src/mmu/page.h',
   'src/mmu/palloc.c',
   'src/mmu/palloc.h',
-  'src/proc/proc.c',
+  'src/proc/proc.cc',
   'src/proc/proc.h',
   'src/runtime.cc',
   'src/screen/screen.c',
