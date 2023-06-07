@@ -74,18 +74,18 @@ x86_rep_in16:
 ; void x86_rep_out16(uint16_t port, uint32_t times, uint32_t addr)
 global x86_rep_out16
 x86_rep_out16:
-push edx
+  push edx
   push ecx
-  push edi
+  push esi
 
   xor edx, edx
   mov dx, [esp + 16]
   mov ecx, [esp + 20]
-  mov edi, [esp + 24]
+  mov esi, [esp + 24]
 
   rep outsw
   
-  pop edi
+  pop esi
   pop ecx
   pop edx
   rep

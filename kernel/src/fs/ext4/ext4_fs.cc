@@ -116,7 +116,7 @@ Ext4FSNode* Ext4FSNode::Mount(char* name) {
     return nullptr;
   }
   // mount
-  r = ext4_mount("ext4_fs", "/", true);
+  r = ext4_mount("ext4_fs", "/", false);
   if (r != EOK) {
     return nullptr;
   }
