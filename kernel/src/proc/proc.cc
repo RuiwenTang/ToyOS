@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "mmu/heap.h"
-#include "mmu/page.h"
+#include "mmu/page.hpp"
 #include "mmu/palloc.h"
 #include "util/list.hpp"
 

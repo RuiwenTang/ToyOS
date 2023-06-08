@@ -7,7 +7,7 @@
 #include "fs/vfs.hpp"
 #include "kprintf.h"
 #include "mmu/heap.h"
-#include "mmu/page.h"
+#include "mmu/page.hpp"
 #include "proc/proc.h"
 #include "screen/screen.h"
 #include "syscall/syscall.h"

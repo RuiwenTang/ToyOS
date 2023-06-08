@@ -1,4 +1,4 @@
-#include "mmu/page.h"
+#include "mmu/page.hpp"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -13,8 +13,12 @@
 #define PD_SIZE 0x400000
 #define PT_SIZE 0x1000
 
-extern const void kernel_start;
-extern const void kernel_end;
+extern "C" {
+
+extern const void* kernel_start;
+extern const void* kernel_end;
+
+}  // extern "C"
 
 PageDirectory g_pd[1024] __attribute__((aligned(4096)));
 
