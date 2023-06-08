@@ -13,6 +13,14 @@
 #define PROC_PAGE_MAP_SIZE (0x1000 * 5)
 #define PROC_STACK_SIZE (0x1000 * 2)
 
+struct MemoryRegion {
+  uint32_t base = 0;
+  uint32_t length = 0;
+
+  MemoryRegion* prev = nullptr;
+  MemoryRegion* next = nullptr;
+};
+
 typedef struct proc {
   StackFrame regs;
   int32_t ticks;
@@ -24,7 +32,7 @@ typedef struct proc {
 
   uint32_t stack_top;
 
-  MemoryRegion* memory;
+  util::List<MemoryRegion> memory;
 
   proc* ready_prev;
   proc* ready_next;
@@ -118,63 +126,55 @@ void proc_exit(Proc* proc) {
   current_proc = ready_list.head;
 
   // free all allocated page
-  while (proc->memory) {
-    MemoryRegion* region = proc->memory;
-    proc->memory = proc->memory->next;
+  MemoryRegion* memory = proc->memory.head;
+  while (memory) {
+    palloc_free(memory->base, memory->length);
 
-    palloc_free(region->base, region->length);
+    auto region = memory;
 
-    kfree(region);
+    memory = memory->next;
+
+    delete region;
   }
 
   kfree(proc);
 }
 
+/**
+ * Inserts the given MemoryRegion into the Proc's memory list.
+ *
+ * @param proc the Proc instance to insert the MemoryRegion into
+ * @param region the MemoryRegion instance to be inserted
+ *
+ */
 void proc_insert_memory_region(Proc* proc, MemoryRegion* region) {
-  if (proc->memory == NULL) {
-    proc->memory = region;
-    return;
-  }
-
-  MemoryRegion* p = proc->memory;
-  while (p->next != NULL) {
-    p = p->next;
-  }
-
-  p->next = region;
+  util::List<MemoryRegion>::Insert<&MemoryRegion::prev, &MemoryRegion::next>(
+      region, proc->memory.tail, nullptr, &proc->memory.head,
+      &proc->memory.tail);
 }
 
-Proc* remove_from_list(Proc* list, Proc* item, list_get_next get_next,
-                       list_set_next set_next) {
-  if (list == item) {
-    Proc* tmp = get_next(list);
-    set_next(item, NULL);
-    return tmp;
+/**
+ * Removes a memory region from the given Proc.
+ *
+ * @param proc The Proc from which to remove the memory region.
+ * @param base The starting address of the memory region to remove.
+ * @param length The length of the memory region to remove.
+ *
+ */
+void proc_remove_memory_region(Proc* proc, uint32_t base, uint32_t length) {
+  // find the region
+  MemoryRegion* region = proc->memory.head;
+  while (region) {
+    if (region->base == base && region->length == length) {
+      break;
+    }
+    region = region->next;
   }
 
-  Proc* p = list;
-
-  while (get_next(p) != item) {
-    p = get_next(p);
+  if (region) {
+    util::List<MemoryRegion>::Remove<&MemoryRegion::prev, &MemoryRegion::next>(
+        region, &proc->memory.head, &proc->memory.tail);
   }
-
-  if (get_next(p) == item) {
-    set_next(p, get_next(p));
-    set_next(item, NULL);
-  }
-
-  return list;
-}
-
-Proc* insert_into_list(Proc* list, Proc* item, list_get_next get_next,
-                       list_set_next set_next) {
-  if (list == NULL) {
-    return item;
-  }
-
-  set_next(item, list);
-
-  return item;
 }
 
 void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,

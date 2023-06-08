@@ -7,7 +7,7 @@ ld = 'i686-toy-ld'
 as = 'nasm'
 
 [host_machine]
-system = 'MacOS'
+system = 'toyos'
 cpu_family = 'x86_64'
 cpu = 'x86_64'
 endian = 'little'

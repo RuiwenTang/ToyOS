@@ -7,13 +7,6 @@
 extern "C" {
 #endif
 
-typedef struct MemoryRegion {
-  uint32_t base;
-  uint32_t length;
-
-  struct MemoryRegion* next;
-} MemoryRegion;
-
 typedef struct stackframe {
   // pushed by isr handler
   uint32_t gs;
