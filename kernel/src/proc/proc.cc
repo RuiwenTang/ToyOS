@@ -87,7 +87,7 @@ Proc* init_proc(uint32_t init_size) {
 
 void proc_add_memory(Proc* proc, uint32_t base, uint32_t length) {
   // step 1 add memory region into proc memory region list
-  MemoryRegion* region = (MemoryRegion*)kmalloc(sizeof(MemoryRegion));
+  auto region = new MemoryRegion;
   region->base = base;
   region->length = length;
 
