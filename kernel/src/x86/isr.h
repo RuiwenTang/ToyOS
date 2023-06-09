@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "proc/proc.h"
+#include "proc/stack_frame.h"
 
 #ifdef __cplusplus
 extern "C" {

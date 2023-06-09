@@ -44,6 +44,7 @@ kernel_src = [
   'src/mmu/palloc.h',
   'src/proc/proc.cc',
   'src/proc/proc.h',
+  'src/proc/stack_frame.h',
   'src/runtime.cc',
   'src/screen/screen.c',
   'src/screen/screen.h',

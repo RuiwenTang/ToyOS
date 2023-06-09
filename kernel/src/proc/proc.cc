@@ -13,6 +13,13 @@
 #define PROC_PAGE_MAP_SIZE (0x1000 * 5)
 #define PROC_STACK_SIZE (0x1000 * 2)
 
+extern "C" {
+
+// defined in proc.asm
+void proc_restart();
+
+}  // extern "C"
+
 struct MemoryRegion {
   uint32_t base = 0;
   uint32_t length = 0;
@@ -49,8 +56,6 @@ uint32_t proc_count = 0;
 
 typedef Proc*(list_get_next)(Proc*);
 typedef void(list_set_next)(Proc*, Proc*);
-
-extern "C" {
 
 static void proc_insert_memory_region(Proc* proc, MemoryRegion* region);
 
@@ -215,9 +220,6 @@ uint32_t proc_phy_address(Proc* proc, uint32_t v_addr) {
   return p_addr_base + p_addr_inner;
 }
 
-// defined in proc.asm
-void proc_restart();
-
 void proc_switch() {
   if (current_proc == NULL) {
     return;
@@ -226,5 +228,3 @@ void proc_switch() {
   mmu::load_proc(current_proc);
   proc_restart();
 }
-
-}  // extern "C"

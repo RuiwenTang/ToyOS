@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#include "proc/proc.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
