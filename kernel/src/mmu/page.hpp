@@ -41,16 +41,21 @@ typedef struct {
   uint32_t address : 20;  // physical address
 } Page;
 
-void page_init(multiboot_info_t* info);
-
-void page_load_directory(void* pdr);
-
-void page_enable();
-
-void page_load_proc(struct proc*);
-
 #ifdef __cplusplus
 }
 #endif
+
+namespace mmu {
+
+/**
+ * Init page mapping
+ *
+ * @param info  multiboot info
+ */
+void Init(multiboot_info_t* info);
+
+void load_proc(struct proc*);
+
+}  // namespace mmu
 
 #endif  // TOY_MMU_PAGE_H

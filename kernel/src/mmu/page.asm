@@ -15,3 +15,16 @@ page_enable:
   mov cr0, eax
   ret
 
+
+extern kernel_start
+extern kernel_end
+
+global get_kernel_start
+get_kernel_start:
+  mov eax, kernel_start
+  ret
+
+global get_kernel_end
+get_kernel_end:
+  mov eax, kernel_end
+  ret

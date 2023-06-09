@@ -21,7 +21,9 @@ uint8_t temp_stack[1024];
 
 void system_init(multiboot_info_t* info, uint32_t stack) {
   gdt_install(stack);
-  page_init(info);
+
+  mmu::Init(info);
+
   idt_intall();
   irq_install();
   timer_init();

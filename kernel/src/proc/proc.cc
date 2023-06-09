@@ -223,7 +223,7 @@ void proc_switch() {
     return;
   }
 
-  page_load_proc(current_proc);
+  mmu::load_proc(current_proc);
   proc_restart();
 }
 

@@ -12,11 +12,16 @@
 
 #define PD_SIZE 0x400000
 #define PT_SIZE 0x1000
+#define KERNEL_HEEP_SIZE PD_SIZE
 
+// these all defined in asm code
 extern "C" {
 
-extern const void* kernel_start;
-extern const void* kernel_end;
+uint32_t get_kernel_start();
+uint32_t get_kernel_end();
+
+void page_load_directory(void* pdr);
+void page_enable();
 
 }  // extern "C"
 
@@ -27,58 +32,19 @@ Page* g_page_table_tail = NULL;
 
 uint32_t g_total_memory = 0;
 
-static void page_init_tables(uint32_t total_memory, multiboot_info_t* info);
+namespace mmu {
 
-static void page_map_screen(multiboot_info_t* info);
-
-void page_init(multiboot_info_t* info) {
-  g_page_table_head = (Page*)((((uint32_t)&kernel_end) + 0xfff) & 0xFFFFF000);
-  uint32_t total_memory = 0;
-  uint32_t mmap_count = info->mmap_length / sizeof(struct multiboot_mmap_entry);
-  struct multiboot_mmap_entry* mmap_ptr =
-      (struct multiboot_mmap_entry*)info->mmap_addr;
-  for (uint32_t i = 0; i < mmap_count; i++) {
-    kprintf("MemoryRegion: base: %x | length %x | type: %d\n",
-            (uint32_t)mmap_ptr->addr, (uint32_t)mmap_ptr->len, mmap_ptr->type);
-    total_memory += mmap_ptr->len;
-    mmap_ptr++;
-  }
-
-  // align total memory by 4MB
-  total_memory += 0x003FFFFF;
-  total_memory &= (~0x003FFFFF);
-
-  g_total_memory = total_memory;
-
-  kprintf("Total memory is %d MB \n", total_memory / (1024 * 1024));
-
-  kprintf("Kernel start at : %x | end at %x \n", (uint32_t)&kernel_start,
-          (uint32_t)&kernel_end);
-
-  kprintf("g_pd at %x | first page_table at %x \n", (uint32_t)g_pd,
-          (uint32_t)g_page_table_head);
-
-  page_init_tables(total_memory, info);
-
-  page_load_directory(g_pd);
-
-  page_enable();
-
-  uint32_t kernel_heap = (uint32_t)g_page_table_tail;
-  // 10 page for kernel heap usage
-  uint32_t kernel_size = 0x1000 * 10;
-
-  heap_init((void*)kernel_heap, kernel_size);
-
-  kprintf("Print after page enable, screen is mapped!\n");
-
-  uint32_t free_space = kernel_heap + kernel_size;
-  kprintf("FreeMemory begin at %x \n", free_space);
-
-  palloc_init(free_space, total_memory - free_space);
+template <typename T>
+uint32_t Align4k(T value) {
+  return (reinterpret_cast<uint32_t>(value) + 0xfff) & ~0xfff;
 }
 
-void page_init_tables(uint32_t total_memory, multiboot_info_t* info) {
+/**
+ * Initializes page tables with a 1:1 map in kernel.
+ *
+ * @param total_memory the total amount of memory to map
+ */
+void init_page_tables(uint32_t total_memory) {
   // 1 : 1 map in kernel
   Page* current = NULL;
   uint32_t i = 0;
@@ -114,12 +80,15 @@ void page_init_tables(uint32_t total_memory, multiboot_info_t* info) {
   }
 
   g_page_table_tail = current + 1024;
-  kprintf("last page_table at: %x \n", (uint32_t)g_page_table_tail);
-
-  page_map_screen(info);
 }
 
-void page_map_screen(multiboot_info_t* info) {
+/**
+ * Map screen memory 1:1 in kernel
+ *
+ * @param info      the multiboot info
+ * @return uint32_t memory end address about video memory
+ */
+uint32_t map_screen(multiboot_info_t* info) {
   uint32_t total_memory = info->framebuffer_height * info->framebuffer_pitch;
   total_memory += 0xfff;
   total_memory &= 0xfffff000;
@@ -171,9 +140,54 @@ void page_map_screen(multiboot_info_t* info) {
   g_page_table_tail = (Page*)current_align;
 
   kprintf("page_tail after map screen : %x \n", (uint32_t)g_page_table_tail);
+
+  return base + total_memory;
 }
 
-void page_load_proc(Proc* p) {
+void Init(multiboot_info_t* info) {
+  uint32_t kernel_end = get_kernel_end();
+  kprintf("kernel end = %x \n", kernel_end);
+  // page dir address
+  g_page_table_head = reinterpret_cast<Page*>(Align4k(kernel_end));
+
+  // calculate total memory size based on multiboot info
+  uint32_t total_memory = 0;
+  uint32_t mmap_count = info->mmap_length / sizeof(struct multiboot_mmap_entry);
+
+  auto mmap_ptr =
+      reinterpret_cast<struct multiboot_mmap_entry*>(info->mmap_addr);
+  for (uint32_t i = 0; i < mmap_count; i++) {
+    kprintf("MemoryRegion: base: %x | length %x | type: %d\n",
+            (uint32_t)mmap_ptr->addr, (uint32_t)mmap_ptr->len, mmap_ptr->type);
+
+    total_memory += mmap_ptr->len;
+    mmap_ptr++;
+  }
+
+  // align total memory by 4MB aka PD_SIZE
+  total_memory += 0x003FFFFF;
+  total_memory &= (~0x003FFFFF);
+
+  // initialize page directory
+  init_page_tables(total_memory);
+  // map screen memmory
+  map_screen(info);
+
+  // init kernel
+  uint32_t kernel_heap_start = (uint32_t)g_page_table_tail;
+  uint32_t kernel_heap_end = kernel_heap_start + KERNEL_HEEP_SIZE;
+
+  heap_init(reinterpret_cast<void*>(kernel_heap_start), KERNEL_HEEP_SIZE);
+
+  palloc_init(kernel_heap_end, total_memory - kernel_heap_end);
+
+  // load page directory
+  page_load_directory(g_pd);
+
+  page_enable();
+}
+
+void load_proc(Proc* p) {
   uint32_t pd_count = (proc_get_maped_length(p) / PD_SIZE) + 1;
 
   uint32_t pd_index = proc_get_maped_base(p) / PD_SIZE;
@@ -189,3 +203,5 @@ void page_load_proc(Proc* p) {
     proc_pt += 0x1000;
   }
 }
+
+}  // namespace mmu
