@@ -4,6 +4,8 @@
 #include <boot/multiboot.h>
 #include <stdint.h>
 
+#include "proc/stack_frame.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -55,6 +57,8 @@ namespace mmu {
 void Init(multiboot_info_t* info);
 
 void load_proc(struct proc*);
+
+void sys_call_mmap(StackFrame* frame);
 
 }  // namespace mmu
 

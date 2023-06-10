@@ -9,6 +9,7 @@
 #include "mmu/palloc.h"
 #include "proc/proc.h"
 #include "screen/screen.h"
+#include "sys/mman.h"
 
 #define PD_SIZE 0x400000
 #define PT_SIZE 0x1000
@@ -108,7 +109,7 @@ uint32_t map_screen(multiboot_info_t* info) {
     uint32_t dir_index = base / 0x400000;
     g_pd[dir_index].present = 1;
     g_pd[dir_index].rw = 1;
-    g_pd[dir_index].user = 1;
+    g_pd[dir_index].user = 0;
     g_pd[dir_index].unused = 0;
 
     g_pd[dir_index].frame = ((uint32_t)current) >> 12;
@@ -117,7 +118,7 @@ uint32_t map_screen(multiboot_info_t* info) {
     for (; j < 1024; j++) {
       current[j].present = 1;
       current[j].rw = 1;
-      current[j].user = 1;
+      current[j].user = 0;
       current[j].unused = 0;
 
       current[j].address = base >> 12;
@@ -202,6 +203,51 @@ void load_proc(Proc* p) {
 
     proc_pt += 0x1000;
   }
+}
+
+/**
+ *  ebx = size of mapped memory
+ *  ecx = phy addr to map can be zero
+ *  edx = flags
+ */
+void sys_call_mmap(StackFrame* frame) {
+  uint32_t ebx = frame->ebx;  // size
+  uint32_t ecx = frame->ecx;  // phy addr
+  uint32_t edx = frame->edx;  // flags
+
+  auto proc = reinterpret_cast<Proc*>(frame);
+
+  // currently only support anon map with no phy addr
+
+  if (ecx != 0 || (edx & MAP_ANON) == 0) {
+    // not support yet
+    return;
+  }
+
+  auto size = Align4k(ebx);
+
+  if (size == 0) {
+    // request size is zero
+    return;
+  }
+
+  uint32_t p_addr = palloc_allocate(size);
+
+  if (p_addr == 0) {
+    // out of memory
+    return;
+  }
+
+  // first add this memory range into pcb
+  proc_add_memory(proc, p_addr, size);
+
+  // map this memory to proc address space at end of proc's memory
+  uint32_t v_addr = proc_get_maped_base(proc) + proc_get_maped_length(proc);
+  v_addr = Align4k(v_addr);
+  proc_map_address(proc, v_addr, p_addr, size);
+
+  // return v_addr to caller
+  frame->eax = v_addr;
 }
 
 }  // namespace mmu

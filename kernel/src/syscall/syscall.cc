@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "kprintf.h"
+#include "mmu/page.hpp"
 #include "screen/screen.h"
 #include "x86/isr.h"
 
@@ -15,9 +16,11 @@ static void print_sys_call(StackFrame* frame) {
   screen_print(str, len, SCREEN_COLOR_GREEN);
 }
 
-void kernel_sys_call(StackFrame* frame) {
+extern "C" void kernel_sys_call(StackFrame* frame) {
   if (frame->eax == 1) {
     print_sys_call(frame);
+  } else if (frame->eax == SYS_CALL_MMAP) {
+    mmu::sys_call_mmap(frame);
   }
 }
 

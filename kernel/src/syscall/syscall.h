@@ -9,6 +9,8 @@ extern "C" {
 
 #define SYS_CALL_INT 0x80
 
+#define SYS_CALL_MMAP 2
+
 void sys_call_init();
 
 #ifdef __cplusplus
