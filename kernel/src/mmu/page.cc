@@ -250,4 +250,37 @@ void sys_call_mmap(StackFrame* frame) {
   frame->eax = v_addr;
 }
 
+/**
+ * ebx = size of memory need to unmmap
+ * ecx = addr of memory need to unmmap
+ *
+ */
+void sys_call_unmmap(StackFrame* frame) {
+  uint32_t ebx = frame->ebx;  // size
+  uint32_t ecx = frame->ecx;  // phy addr
+
+  auto proc = reinterpret_cast<Proc*>(frame);
+
+  // invalid size
+  if (ebx == 0 || (ebx % 0x1000) != 0) {
+    frame->eax = 1;
+    return;
+  }
+
+  if (ecx <= proc_get_maped_base(proc)) {
+    frame->eax = 1;
+    return;
+  }
+
+  uint32_t p_addr = proc_phy_address(proc, ecx);
+
+  // free this memory
+  palloc_free(p_addr, ebx);
+
+  // unmmap this memory in proc address space
+  proc_unmmap_address(proc, ecx, ebx);
+
+  frame->eax = 0;
+}
+
 }  // namespace mmu

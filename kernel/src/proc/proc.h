@@ -38,6 +38,8 @@ uint32_t proc_get_maped_length(Proc* proc);
 void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
                       uint32_t size);
 
+void proc_unmmap_address(proc* proc, uint32_t v_addr, uint32_t size);
+
 uint32_t proc_phy_address(Proc* proc, uint32_t v_addr);
 
 void proc_switch();

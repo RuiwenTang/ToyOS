@@ -207,6 +207,30 @@ void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
   }
 }
 
+void proc_unmmap_address(proc* proc, uint32_t v_addr, uint32_t size) {
+  if (v_addr < PROC_MEMORY_BASE) {
+    return;
+  }
+
+  size += 0xFFF;
+  size &= 0xFFFFF000;
+
+  uint32_t count = size / 0x1000;
+
+  Page* pt = (Page*)proc->page_table;
+
+  uint32_t first_pt_index = (v_addr - PROC_MEMORY_BASE) / 0x1000;
+  for (uint32_t i = 0; i < count; i++) {
+    pt[first_pt_index + i].present = 0;
+    pt[first_pt_index + i].rw = 0;
+    pt[first_pt_index + i].user = 0;
+    pt[first_pt_index + i].unused = 0;
+    pt[first_pt_index + i].address = 0;
+  }
+
+  // TODO reduce proc memory length
+}
+
 uint32_t proc_phy_address(Proc* proc, uint32_t v_addr) {
   if (v_addr < PROC_MEMORY_BASE) {
     return 0;

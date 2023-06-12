@@ -21,6 +21,8 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     print_sys_call(frame);
   } else if (frame->eax == SYS_CALL_MMAP) {
     mmu::sys_call_mmap(frame);
+  } else if (frame->eax == SYS_CALL_UNMAP) {
+    mmu::sys_call_unmmap(frame);
   }
 }
 

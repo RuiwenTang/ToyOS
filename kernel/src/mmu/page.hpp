@@ -60,6 +60,8 @@ void load_proc(struct proc*);
 
 void sys_call_mmap(StackFrame* frame);
 
+void sys_call_unmmap(StackFrame* frame);
+
 }  // namespace mmu
 
 #endif  // TOY_MMU_PAGE_H

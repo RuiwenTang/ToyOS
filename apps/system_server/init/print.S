@@ -29,3 +29,19 @@ k_mmap:
   popl %ecx
   popl %ebx
   ret
+
+// int k_unmmap(void* ptr, int size)
+.global k_unmmap
+.type k_unmmap, @function
+k_unmmap:
+  pushl %ebx
+  pushl %ecx
+  movl $3, %eax
+  movl 12(%esp), %ecx // addr
+  movl 16(%esp), %ebx // size
+
+  int $0x80
+
+  popl %ecx
+  popl %ebx
+  ret
