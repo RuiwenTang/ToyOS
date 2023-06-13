@@ -28,6 +28,12 @@ struct MemoryRegion {
   MemoryRegion* next = nullptr;
 };
 
+struct FileDescriptor {
+  fs::Node* node = {};
+  FileDescriptor* prev = {};
+  FileDescriptor* next = {};
+};
+
 typedef struct proc {
   StackFrame regs;
   int32_t ticks;
@@ -40,6 +46,7 @@ typedef struct proc {
   uint32_t stack_top;
 
   util::List<MemoryRegion> memory;
+  util::List<FileDescriptor> files;
 
   proc* ready_prev;
   proc* ready_next;
@@ -180,6 +187,47 @@ void proc_remove_memory_region(Proc* proc, uint32_t base, uint32_t length) {
     util::List<MemoryRegion>::Remove<&MemoryRegion::prev, &MemoryRegion::next>(
         region, &proc->memory.head, &proc->memory.tail);
   }
+}
+
+void proc_insert_file(Proc* proc, fs::Node* file) {
+  auto head = proc->files.head;
+
+  while (head) {
+    if (head->node == file) {
+      return;
+    }
+
+    head = head->next;
+  }
+
+  // insert into list
+
+  auto desc = new FileDescriptor;
+
+  desc->node = file;
+
+  util::List<FileDescriptor>::Insert<&FileDescriptor::prev,
+                                     &FileDescriptor::next>(
+      desc, proc->files.tail, nullptr, &proc->files.head, &proc->files.tail);
+}
+
+void proc_remove_file(Proc* proc, fs::Node* file) {
+  FileDescriptor* desc = nullptr;
+
+  auto head = proc->files.head;
+
+  while (head) {
+    if (head->node == file) {
+      desc = head;
+      break;
+    }
+
+    head = head->next;
+  }
+
+  util::List<FileDescriptor>::Remove<&FileDescriptor::prev,
+                                     &FileDescriptor::next>(
+      desc, &proc->files.head, &proc->files.tail);
 }
 
 void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,

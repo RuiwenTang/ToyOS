@@ -1,6 +1,7 @@
 #ifndef TOY_PROC_PROC_H
 #define TOY_PROC_PROC_H
 
+#include "fs/vfs.hpp"
 #include "proc/stack_frame.h"
 
 struct proc;
@@ -34,6 +35,10 @@ uint32_t proc_get_page_table(Proc* proc);
 uint32_t proc_get_maped_base(Proc* proc);
 
 uint32_t proc_get_maped_length(Proc* proc);
+
+void proc_insert_file(Proc* proc, fs::Node* file);
+
+void proc_remove_file(Proc* proc, fs::Node* file);
 
 void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
                       uint32_t size);

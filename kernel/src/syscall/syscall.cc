@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "fs/vfs.hpp"
 #include "kprintf.h"
 #include "mmu/page.hpp"
 #include "screen/screen.h"
@@ -23,6 +24,10 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     mmu::sys_call_mmap(frame);
   } else if (frame->eax == SYS_CALL_UNMAP) {
     mmu::sys_call_unmmap(frame);
+  } else if (frame->eax == SYS_CALL_OPEN) {
+    fs::sys_call_open(frame);
+  } else if (frame->eax == SYS_CALL_CLOSE) {
+    fs::sys_call_close(frame);
   }
 }
 

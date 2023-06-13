@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include "proc/stack_frame.h"
+
 #define PATH_SEPARATOR '/'
 #define PATH_SEPARATOR_STRING "/"
 #define PATH_UP ".."
@@ -54,6 +56,10 @@ class Node {
 
   friend class RootFSNode;
 };
+
+void sys_call_open(StackFrame* frame);
+
+void sys_call_close(StackFrame* frame);
 
 }  // namespace fs
 

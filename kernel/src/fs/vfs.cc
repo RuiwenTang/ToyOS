@@ -5,6 +5,7 @@
 #include "fs/ext4/ext4_fs.hpp"
 #include "fs/mem/mem_fs.hpp"
 #include "kprintf.h"
+#include "proc/proc.h"
 #include "util/list.hpp"
 
 namespace fs {
@@ -77,6 +78,64 @@ void Init() {
     // not found ext4 fs node
     kprintf("not found ext4 fs node\n");
   }
+}
+
+/**
+ * ebx : char* for file name
+ * ecx : flags
+ */
+void sys_call_open(StackFrame* frame) {
+  if (frame->ebx == 0) {
+    // no file name
+    frame->eax = -1;
+    return;
+  }
+
+  auto name = reinterpret_cast<const char*>(frame->ebx);
+
+  if (strlen(name) == 0) {
+    // empty file name
+    frame->eax = -1;
+    return;
+  }
+
+  uint32_t flags = frame->ecx;
+
+  (void)flags;  // ignore flags for now
+
+  auto root_node = RootFSNode::GetRootNode();
+
+  auto fs_node = root_node->Open(name, flags, 0);
+
+  if (fs_node == nullptr) {
+    // failed open file
+    frame->eax = -1;
+    return;
+  }
+
+  auto proc = reinterpret_cast<Proc*>(frame);
+
+  proc_insert_file(proc, fs_node);
+
+  frame->eax = reinterpret_cast<uint32_t>(fs_node);
+}
+
+/**
+ * ebx -> file ptr in kernel space
+ *
+ */
+void sys_call_close(StackFrame* frame) {
+  if (frame->ebx == 0) {
+    frame->eax = -1;
+    return;
+  }
+
+  auto fs_node = reinterpret_cast<fs::Node*>(frame->ebx);
+
+  fs_node->Close();
+  // TODO delete fs_node
+
+  frame->eax = 0;
 }
 
 }  // namespace fs
