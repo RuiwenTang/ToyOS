@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "fs/ext4/ext4_fs.hpp"
-#include "fs/mem/mem_fs.hpp"
+#include "fs/mem/std_fs.hpp"
 #include "kprintf.h"
 #include "proc/proc.h"
 #include "util/list.hpp"
@@ -78,6 +78,10 @@ void Init() {
     // not found ext4 fs node
     kprintf("not found ext4 fs node\n");
   }
+
+  // stdout file
+  auto std_node = new StdFSNode();
+  g_root_fs->RegisterChild(std_node);
 }
 
 /**
