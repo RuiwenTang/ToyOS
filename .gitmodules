@@ -2,3 +2,7 @@
 	path = common/limine/extern
 	url = https://github.com/limine-bootloader/limine.git
 	branch = v4.x-branch-binary
+[submodule "apps/newlib"]
+	path = apps/newlib
+	url = git@github.com:RuiwenTang/newlib.git
+	branch = porting_to_toyos
