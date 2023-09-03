@@ -71,6 +71,7 @@ kernel_c_flags = [
   '-fno-builtin',
   '-nostdlib',
   '-DCONFIG_USE_USER_MALLOC=1',
+  '-Wno-unused-function',
 ]
 
 kernel_cpp_args = [

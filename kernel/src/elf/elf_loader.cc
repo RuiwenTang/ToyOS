@@ -40,8 +40,13 @@ int load_and_exec(const char* path) {
 
   impl.EnumPhdr(p_headers, &ph_count);
 
-  uint32_t total_size = p_headers[ph_count - 1].p_vaddr +
-                        p_headers[ph_count - 1].p_memsz - p_headers[0].p_vaddr;
+  uint32_t total_size = 0;
+
+  for (uint32_t i = 0; i < ph_count; i++) {
+    kprintf("p_addr at %x with size : %x \n", p_headers[i].p_vaddr,
+            p_headers[i].p_memsz);
+    total_size += p_headers[i].p_memsz;
+  }
 
 #ifdef ELF_DEBUG
   kprintf("found %d p_headers total memsize: %x \n", ph_count, total_size);
@@ -62,8 +67,12 @@ int load_and_exec(const char* path) {
 
   // copy app code and data
   for (uint32_t i = 0; i < ph_count; i++) {
-    uint32_t p_addr = proc_phy_address(proc, p_headers[i].p_vaddr);
+    if (p_headers[i].p_vaddr == 0) {
+      // binary linked with newlib config may contains zero headers in the end
+      continue;
+    }
 
+    uint32_t p_addr = proc_phy_address(proc, p_headers[i].p_vaddr);
     if (p_headers[i].p_filesz == 0) {
       memset((void*)p_addr, 0, p_headers[i].p_memsz);
       continue;

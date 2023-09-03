@@ -1,18 +1,15 @@
 
-# app link script
-app_link_script = meson.current_source_dir() + '/link.ld'
 
+# app link flags
+app_link_flags = [
+  '--sysroot=' + meson.source_root() + '/sysroot/i686-toy-elf',
+  '-T', 'link.ld',
+  '-z', 'noexecstack',
+]
 
-# generate compile newlib and generate sysroot
-sysroot = custom_target('sysroot',
-    output: 'sysroot',
-    input: [ 'gen_sysroot.py' ],
-    command: [
-      prog_python,
-      '@INPUT@',
-      meson.current_source_dir() + '/newlib',
-      '@OUTPUT@',
-    ]
-  )
+app_c_flags = [
+  '--sysroot=' + meson.source_root() + '/sysroot/i686-toy-elf',
+  '-I'+ meson.source_root() + '/sysroot/i686-toy-elf/include',
+] 
 
 subdir('system_server')

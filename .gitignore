@@ -1,5 +1,6 @@
 build/*
 toolchain
+sysroot
 *.DS_Store
 subprojects/*
 !subprojects/*.wrap

@@ -1,7 +1,7 @@
 #! /bin/bash
 
 export PREFIX="$HOME/osdev/toolchain"
-export TARGET=i686-toy
+export TARGET=i686-toy-elf
 export PATH="$PREFIX/bin:$PATH"
 export CROSS_SYSROOT="$HOME/osdev/sysroot"
 
@@ -21,7 +21,7 @@ then
 tar xvfz binutils-2.39.tar.gz
 fi
 
-if [ -d binutils-2.39 ]
+if [ ! -d binutils-2.39 ]
 then
     cd binutils-2.39
     patch -p1 < ../../patchs/binutils-2.93.patch
@@ -32,7 +32,7 @@ if [ ! -d build_binutils ]
 then
     mkdir build_binutils
     cd build_binutils
-    ../binutils-2.39/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot=$CROSS_SYSROOT --disable-werror --disable-gdb
+    ../binutils-2.39/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$CROSS_SYSROOT" --disable-werror --disable-gdb
     make
     make install
     cd ../

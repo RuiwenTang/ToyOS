@@ -1,9 +1,9 @@
 [binaries]
-c = 'i686-toy-gcc'
-cpp = 'i686-toy-g++'
-ar = 'i686-toy-ar'
-strip = 'i686-toy-strip'
-ld = 'i686-toy-ld'
+c = 'i686-toy-elf-gcc'
+cpp = 'i686-toy-elf-g++'
+ar = 'i686-toy-elf-ar'
+strip = 'i686-toy-elf-strip'
+ld = 'i686-toy-elf-ld'
 as = 'nasm'
 
 [host_machine]

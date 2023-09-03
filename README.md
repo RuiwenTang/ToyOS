@@ -14,6 +14,13 @@ A hobby os made for fun.
     ```
 * QEMU or bochs
 
+### Prepare sysroot
+
+```
+python make_sysroot.py
+```
+
+
 ### Compile and Run
 
 ```

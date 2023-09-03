@@ -18,8 +18,7 @@
   ],
   "editor.formatOnSave": true,
   "[python]": {
-    "editor.defaultFormatter": "ms-python.python"
+    "editor.defaultFormatter": "ms-python.autopep8"
   },
   "python.formatting.provider": "none",
-  "C_Cpp.default.compileCommands": "build/vscode_compile_commands.json",
 }

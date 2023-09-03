@@ -1,27 +1,19 @@
-
+#include <math.h>
 
 void k_print(char* str);
 
-void* k_mmap(int size);
+int main(int argc, const char** argv) {
+  char buf[2];
+  buf[0] = '0';
+  buf[1] = 0;
 
-int k_unmmap(void*, int size);
+  double a = cos(0.3);
 
-void main() {
-  k_print("Hello sys call\n");
-
-  char* buffer = k_mmap(0x1000);
-
-  // int ret = k_unmmap(buffer, 0x1000);
-
-  // char buf[2];
-  // buf[0] = '0' + ret;
-  // buf[1] = 0;
-
-  // k_print(buf);
+  k_print("hello Sys call \n");
 
   while (1) {
-    buffer[0] += 1;
+    buf[0] += 2;
   }
 
-  return;
+  return 0;
 }
