@@ -8,6 +8,8 @@
 
 #define PRINT_BUF_MAX 512
 
+static uint32_t g_text_color = SCREEN_COLOR_WHITE;
+
 static char print_buf[PRINT_BUF_MAX];
 
 static const char *base_digits = "0123456789abcdef";
@@ -188,7 +190,7 @@ void vprint(const char *fmt, va_list args) {
   }
 
 out:
-  screen_print(print_buf, print_buf_i, SCREEN_COLOR_WHITE);
+  screen_print(print_buf, print_buf_i, g_text_color);
 }
 
 void kprintf(const char *fmt, ...) {
@@ -198,3 +200,14 @@ void kprintf(const char *fmt, ...) {
   vprint(fmt, args);
   va_end(args);
 }
+
+void kpanicf(const char *fmt, ...) {
+  g_text_color = SCREEN_COLOR_RED;
+
+  va_list args;
+
+  va_start(args, fmt);
+  vprint(fmt, args);
+  va_end(args);
+}
+

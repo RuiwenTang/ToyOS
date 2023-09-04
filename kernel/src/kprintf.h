@@ -7,7 +7,9 @@ extern "C" {
 
 // simple implement just used in kernel for debug
 // https://github.com/limine-bootloader/limine/blob/trunk/common/lib/print.s2.c
-void kprintf(const char *, ...);
+void kprintf(const char* fmt, ...);
+
+void kpanicf(const char* fmt, ...);
 
 #ifdef __cplusplus
 }

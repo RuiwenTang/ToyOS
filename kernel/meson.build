@@ -35,6 +35,7 @@ kernel_src = [
   'src/fs/vfs.cc',
   'src/fs/vfs.hpp',
   'src/kmain.cc',
+  'src/kpanic.h',
   'src/kprintf.c',
   'src/kprintf.h',
   'src/mmu/heap.c',

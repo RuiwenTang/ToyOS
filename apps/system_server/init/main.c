@@ -11,8 +11,5 @@ int main(int argc, const char** argv) {
 
   printf("cos(0.3) = %lf\n", a);
 
-  while (1) {
-  }
-
   return 0;
 }

@@ -24,6 +24,7 @@ align 4
 section .text
 
 global start
+global kernel_hang
 extern kernel_main
 start:
   cli
@@ -36,6 +37,7 @@ start:
   call kernel_main
 
   cli
+kernel_hang:
 .hang:
   hlt
   jmp .hang

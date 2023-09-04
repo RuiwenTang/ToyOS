@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "kpanic.h"
 #include "mmu/heap.h"
 #include "mmu/page.hpp"
 #include "mmu/palloc.h"
@@ -150,6 +151,9 @@ void proc_exit(Proc* proc) {
   }
 
   kfree(proc);
+
+  // switch to other process
+  proc_switch();
 }
 
 /**
@@ -294,6 +298,8 @@ uint32_t proc_phy_address(Proc* proc, uint32_t v_addr) {
 
 void proc_switch() {
   if (current_proc == NULL) {
+    // No process can run, the kernel need to panic
+    KERNEL_PANIC("NO available process can run !!");
     return;
   }
 
