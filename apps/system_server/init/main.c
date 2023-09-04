@@ -1,8 +1,6 @@
 #include <math.h>
 #include <stdio.h>
 
-void k_print(char* str);
-
 int main(int argc, const char** argv) {
   char buf[50];
   buf[0] = '\0';
@@ -11,7 +9,7 @@ int main(int argc, const char** argv) {
 
   sprintf(buf, "a = %lf\n", a);
 
-  k_print(buf);
+  printf("cos(0.3) = %lf\n", a);
 
   while (1) {
   }

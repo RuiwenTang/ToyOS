@@ -9,6 +9,7 @@ extern "C" {
 
 #define SYS_CALL_INT 0x80
 
+#define SYS_CALL_WRITE 1
 #define SYS_CALL_MMAP 2
 #define SYS_CALL_UNMAP 3
 #define SYS_CALL_OPEN 4

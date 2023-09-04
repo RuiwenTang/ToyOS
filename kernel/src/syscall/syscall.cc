@@ -12,14 +12,20 @@
 static void print_sys_call(StackFrame* frame) {
   // the address need to do memory map, but for now kernel has the proc memory
   // mapping
-  char* str = (char*)frame->ebx;
-  uint32_t len = strlen(str);
+  char* str = (char*)frame->ecx;
+  uint32_t len = frame->edx;
   screen_print(str, len, SCREEN_COLOR_GREEN);
+  frame->eax = len;
 }
 
 extern "C" void kernel_sys_call(StackFrame* frame) {
-  if (frame->eax == 1) {
-    print_sys_call(frame);
+  if (frame->eax == SYS_CALL_WRITE) {
+    // File id is stored in ebx
+    if (frame->ebx == 1) {
+      print_sys_call(frame);
+    } else {
+      // TODO : support normal fs write support
+    }
   } else if (frame->eax == SYS_CALL_MMAP) {
     mmu::sys_call_mmap(frame);
   } else if (frame->eax == SYS_CALL_UNMAP) {
