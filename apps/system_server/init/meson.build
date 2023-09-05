@@ -1,7 +1,7 @@
 
 init_bin = executable(
     'init.bin',
-    sources: ['main.c', 'print.S'],
+    sources: ['main.c'],
     link_args: [
         app_link_flags
     ],
