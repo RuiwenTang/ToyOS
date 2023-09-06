@@ -1,9 +1,28 @@
 #! /bin/bash
 
+build_for_user=0
+target_sysroot=""
+
+if [ $# -eq 0 ]
+then
+    build_for_user=0
+    echo "build toolchain without sysroot"
+else
+    build_for_user=1
+    target_sysroot="$(pwd)/$1"
+
+    if [ ! -d "$target_sysroot" ]
+    then
+        echo "target sysroot [ $target_sysroot ] not exists!"
+        exit 1
+    else
+        echo "build toolchain with sysroot at $target_sysroot"
+    fi
+fi
+
 export PREFIX="$HOME/osdev/toolchain"
 export TARGET=i686-toy-elf
 export PATH="$PREFIX/bin:$PATH"
-export CROSS_SYSROOT="$HOME/osdev/sysroot"
 
 mkdir -p toolchain
 
@@ -28,14 +47,29 @@ then
     cd ../
 fi
 
-if [ ! -d build_binutils ]
+if [ $build_for_user == 0 ]
 then
-    mkdir build_binutils
-    cd build_binutils
-    ../binutils-2.39/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$CROSS_SYSROOT" --disable-werror --disable-gdb
-    make
-    make install
-    cd ../
+    # build with no sysroot
+    if [ ! -d build_binutils ]
+    then
+        mkdir build_binutils
+        cd build_binutils
+        ../binutils-2.39/configure --target=$TARGET --prefix="$PREFIX" --disable-werror --disable-gdb
+        make
+        make install
+        cd ../
+    fi
+else
+    # build with sysroot
+    if [ ! -d build_binutils_sysroot ]
+    then
+        mkdir build_binutils_sysroot
+        cd build_binutils_sysroot
+        ../binutils-2.39/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$target_sysroot" --disable-werror --disable-gdb
+        make
+        make install
+        cd ../
+    fi
 fi
 
 if [ ! -f gcc-12.2.0.tar.xz ]
@@ -52,14 +86,31 @@ then
     cd ../
 fi
 
-if [ ! -d build_gcc ]
+if [ $build_for_user == 0 ]
 then
-    mkdir -p build_gcc
-    cd build_gcc
-    echo $pwd
-    ../gcc-12.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --enable-shared
-    make all-gcc
-    make all-target-libgcc
-    make install-gcc
-    make install-target-libgcc
+    # build without sysroot
+    if [ ! -d build_gcc ]
+    then
+        mkdir -p build_gcc
+        cd build_gcc
+        ../gcc-12.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --enable-shared
+        make all-gcc
+        make all-target-libgcc
+        make install-gcc
+        make install-target-libgcc
+    fi
+else
+    # build without sysroot
+    if [ ! -d build_gcc_sysroot ]
+    then
+        mkdir -p build_gcc_sysroot
+    fi
+        cd build_gcc_sysroot
+        ../gcc-12.2.0/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$target_sysroot" --with-newlib --disable-nls --enable-languages=c,c++ --enable-shared
+        make all-gcc
+        make all-target-libgcc
+        make install-gcc
+        make install-target-libgcc
+        make all-target-libstdc++-v3
+        make install-target-libstdc++-v3
 fi

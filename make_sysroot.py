@@ -51,4 +51,17 @@ if __name__ == "__main__":
     print(install_dir)
     # build
     os.chdir("build/")
-    sys.exit(build_newlib(source_dir, install_dir))
+    ret = build_newlib(source_dir, install_dir)
+
+    if ret == 1:
+        sys.exit(1)
+
+    # FIXME to solve gcc sysroot header and lib search path
+    os.chdir(pwd)
+    os.chdir("sysroot/i686-toy-elf")
+    os.mkdir('usr')
+    os.chdir('usr')
+    subprocess.call(['ln', '-s', '../include', '.'])
+    subprocess.call(['ln', '-s', '../lib', '.'])
+
+    sys.exit(0)
