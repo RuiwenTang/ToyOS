@@ -20,6 +20,11 @@ A hobby os made for fun.
 python make_sysroot.py
 ```
 
+### Generate OS Specific GCC Toolchain
+
+```
+./make_toolchain.sh sysroot/i686-toy-elf
+```
 
 ### Compile and Run
 
