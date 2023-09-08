@@ -58,10 +58,11 @@ if __name__ == "__main__":
 
     # FIXME to solve gcc sysroot header and lib search path
     os.chdir(pwd)
-    os.chdir("sysroot/i686-toy-elf")
-    os.mkdir('usr')
+    os.chdir("sysroot")
+    if not os.path.exists('usr'):
+        os.mkdir('usr')
     os.chdir('usr')
-    subprocess.call(['ln', '-s', '../include', '.'])
-    subprocess.call(['ln', '-s', '../lib', '.'])
+    subprocess.call(['ln', '-s', '../i686-toy-elf/include', '.'])
+    subprocess.call(['ln', '-s', '../i686-toy-elf/lib', '.'])
 
     sys.exit(0)
