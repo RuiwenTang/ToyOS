@@ -102,7 +102,7 @@ else
         mkdir -p build_gcc_sysroot
     fi
         cd build_gcc_sysroot
-        ../gcc-12.2.0/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$target_sysroot" --with-newlib --disable-nls --enable-languages=c,c++ --enable-shared
+        ../gcc-12.2.0/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$target_sysroot" --with-build-sysroot="$target_sysroot" --disable-nls --enable-languages=c,c++ --enable-shared
         make all-gcc -j2
         make all-target-libgcc
         make install-gcc

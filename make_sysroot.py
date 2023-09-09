@@ -48,6 +48,8 @@ if __name__ == "__main__":
     install_dir = os.path.join(pwd, "sysroot/")
     print(source_dir)
     print(install_dir)
+    if not os.path.exists("build"):
+        os.mkdir("build")
     # build
     os.chdir("build/")
     ret = build_newlib(source_dir, install_dir)
