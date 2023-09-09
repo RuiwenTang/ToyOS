@@ -37,6 +37,7 @@ mk_disk_img = custom_target(
     limine_cfg,
     kernel_sys,
     init_bin,
+    hello_cpp,
   ]
 )
 
