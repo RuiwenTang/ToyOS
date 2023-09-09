@@ -21,7 +21,7 @@ else
 fi
 
 export PREFIX="$HOME/osdev/toolchain"
-export TARGET=i686-toy-elf
+export TARGET=i686-toy
 export PATH="$PREFIX/bin:$PATH"
 
 mkdir -p toolchain
@@ -37,11 +37,7 @@ fi
 
 if [ ! -d binutils-2.39 ]
 then
-tar xvfz binutils-2.39.tar.gz
-fi
-
-if [ ! -d binutils-2.39 ]
-then
+    tar xvfz binutils-2.39.tar.gz
     cd binutils-2.39
     patch -p1 < ../../patchs/binutils-2.93.patch
     cd ../
@@ -55,7 +51,7 @@ then
         mkdir build_binutils
         cd build_binutils
         ../binutils-2.39/configure --target=$TARGET --prefix="$PREFIX" --disable-werror --disable-gdb
-        make
+        make -j2
         make install
         cd ../
     fi
@@ -66,7 +62,7 @@ else
         mkdir build_binutils_sysroot
         cd build_binutils_sysroot
         ../binutils-2.39/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$target_sysroot" --disable-werror --disable-gdb
-        make
+        make -j2
         make install
         cd ../
     fi
@@ -94,7 +90,7 @@ then
         mkdir -p build_gcc
         cd build_gcc
         ../gcc-12.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --enable-shared
-        make all-gcc
+        make all-gcc -j2
         make all-target-libgcc
         make install-gcc
         make install-target-libgcc
@@ -107,7 +103,7 @@ else
     fi
         cd build_gcc_sysroot
         ../gcc-12.2.0/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot="$target_sysroot" --with-newlib --disable-nls --enable-languages=c,c++ --enable-shared
-        make all-gcc
+        make all-gcc -j2
         make all-target-libgcc
         make install-gcc
         make install-target-libgcc

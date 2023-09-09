@@ -10,8 +10,7 @@ def config_newlib(source_dir: str, install_dir: str):
         os.path.join(source_dir, "configure"),
         "--prefix=" + os.path.abspath(install_dir),
         "--disable-shared",
-        "--disable-libstdcxx",
-        "--target=i686-toy-elf",
+        "--target=i686-toy",
     ]
 
     return subprocess.call(config_cmd)
@@ -62,7 +61,7 @@ if __name__ == "__main__":
     if not os.path.exists('usr'):
         os.mkdir('usr')
     os.chdir('usr')
-    subprocess.call(['ln', '-s', '../i686-toy-elf/include', '.'])
-    subprocess.call(['ln', '-s', '../i686-toy-elf/lib', '.'])
+    subprocess.call(['ln', '-s', '../i686-toy/include', '.'])
+    subprocess.call(['ln', '-s', '../i686-toy/lib', '.'])
 
     sys.exit(0)
