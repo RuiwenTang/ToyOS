@@ -19,6 +19,8 @@ class ElfFileImpl : public ElfFile {
 
   bool OnRead(char* buf, uint32_t size) override;
 
+  uint32_t OnGetFileSize() override;
+
  private:
   fs::Node* m_node;
 };

@@ -46,8 +46,22 @@ extern "C" int32_t ide_dev_bread(ext4_blockdev* bdev, void* buf,
     return ENODEV;
   }
 
-  if (ide_ata_access(0, g_device_index, blk_id, blk_cnt, (uint8_t*)buf)) {
-    return ENODATA;
+  uint32_t max_read = 255;
+  uint8_t* p_buf = (uint8_t*)buf;
+  while (blk_cnt >= max_read) {
+    if (ide_ata_access(0, g_device_index, blk_id, max_read, p_buf)) {
+      return ENODATA;
+    }
+
+    blk_id += max_read;
+    blk_cnt -= max_read;
+    p_buf += max_read * SECTOR_SIZE;
+  }
+
+  if (blk_cnt > 0) {
+    if (ide_ata_access(0, g_device_index, blk_id, blk_cnt, p_buf)) {
+      return ENODATA;
+    }
   }
 
   return EOK;
@@ -155,7 +169,9 @@ void Ext4FSNode::Close() {}
 // -----------------------------------------------------------------------------
 
 Ext4FileNode::Ext4FileNode(const char* name, ext4_file* file)
-    : Node(name, 0, 0), m_file(file) {}
+    : Node(name, 0, 0), m_file(file) {
+  SetSize(m_file->fsize);
+}
 
 Ext4FileNode::~Ext4FileNode() {
   if (m_file != nullptr) {

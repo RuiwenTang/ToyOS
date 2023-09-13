@@ -41,6 +41,8 @@ class ElfFile {
 
   bool Read(char* buf, uint32_t size);
 
+  uint32_t GetFileSize();
+
  protected:
   virtual bool OnOpen(const char* file_name) = 0;
 
@@ -49,6 +51,8 @@ class ElfFile {
   virtual bool OnSeek(uint32_t offset) = 0;
 
   virtual bool OnRead(char* buf, uint32_t size) = 0;
+
+  virtual uint32_t OnGetFileSize() = 0;
 
  private:
   bool CheckValid();

@@ -27,6 +27,8 @@ int load_and_exec(const char* path) {
     return 2;
   }
 
+  kprintf("file size: %x \n", impl.GetFileSize());
+
   uint32_t ph_count = 0;
 
   impl.EnumPhdr(nullptr, &ph_count);
@@ -40,13 +42,19 @@ int load_and_exec(const char* path) {
 
   impl.EnumPhdr(p_headers, &ph_count);
 
-  uint32_t total_size = 0;
-
+  uint32_t mapped_end = 0x80000000;
   for (uint32_t i = 0; i < ph_count; i++) {
-    kprintf("p_addr at %x with size : %x \n", p_headers[i].p_vaddr,
-            p_headers[i].p_memsz);
-    total_size += p_headers[i].p_memsz;
+    if (p_headers[i].p_type & PT_LOAD) {
+      kprintf("p_addr at %x with size : %x \n", p_headers[i].p_vaddr,
+              p_headers[i].p_memsz);
+      uint32_t end = p_headers[i].p_vaddr + p_headers[i].p_memsz;
+      if (end > mapped_end) {
+        mapped_end = end;
+      }
+    }
   }
+
+  uint32_t total_size = mapped_end - 0x80000000;
 
 #ifdef ELF_DEBUG
   kprintf("found %d p_headers total memsize: %x \n", ph_count, total_size);

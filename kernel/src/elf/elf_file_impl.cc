@@ -44,3 +44,11 @@ bool ElfFileImpl::OnRead(char* buf, uint32_t size) {
 
   return m_node->Read(size, (uint8_t*)buf);
 }
+
+uint32_t ElfFileImpl::OnGetFileSize() {
+  if (!m_node) {
+    return 0;
+  }
+
+  return m_node->GetSize();
+}

@@ -63,6 +63,14 @@ bool ElfFile::Read(char* buf, uint32_t size) {
   return OnRead(buf, size);
 }
 
+uint32_t ElfFile::GetFileSize() {
+  if (!IsValid()) {
+    return false;
+  }
+
+  return OnGetFileSize();
+}
+
 bool ElfFile::CheckValid() {
   this->OnSeek(0);
 
