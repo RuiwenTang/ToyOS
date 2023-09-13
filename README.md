@@ -1,18 +1,17 @@
-
 ## ToyOS
 
 A hobby os made for fun.
 
 ### Requirement
 
-* Ninja
-* Meson
-* Nasm
-* Cross GCC Compile
-    ```
-    ./make_toolchain.sh
-    ```
-* QEMU or bochs
+- Ninja
+- Meson
+- Nasm
+- Cross GCC Compile
+  ```
+  ./make_toolchain.sh
+  ```
+- QEMU or bochs
 
 ### Prepare sysroot
 
@@ -23,7 +22,7 @@ python make_sysroot.py
 ### Generate OS Specific GCC Toolchain
 
 ```
-./make_toolchain.sh sysroot/i686-toy-elf
+./make_toolchain.sh sysroot
 ```
 
 ### Compile and Run
