@@ -16,9 +16,11 @@ class ElfFileHost : public ElfFile {
   void OnClose() override;
   bool OnSeek(uint32_t offset) override;
   bool OnRead(char* buf, uint32_t size) override;
+  uint32_t OnGetFileSize() override;
 
  private:
   std::fstream m_file;
+  uint32_t m_size;
 };
 
 }  // namespace test

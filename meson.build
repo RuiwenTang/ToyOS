@@ -13,7 +13,6 @@ nasm_c = generator(nasm,
     '-o', '@OUTPUT@'])
 
 subdir('common/elf')
-subdir('common/fatfs')
 subdir('common/limine')
 subdir('common/lwext4')
 subdir('bootloader')
