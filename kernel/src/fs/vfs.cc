@@ -136,8 +136,11 @@ void sys_call_close(StackFrame* frame) {
 
   auto fs_node = reinterpret_cast<fs::Node*>(frame->ebx);
 
+  auto proc = reinterpret_cast<Proc*>(frame);
+
   fs_node->Close();
-  // TODO delete fs_node
+
+  proc_remove_file(proc, fs_node);
 
   frame->eax = 0;
 }

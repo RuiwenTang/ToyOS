@@ -138,6 +138,14 @@ void proc_exit(Proc* proc) {
 
   current_proc = ready_list.head;
 
+  // close all files proc opened
+  FileDescriptor* fd = proc->files.head;
+
+  while (fd) {
+    fd->node->Close();
+    proc_remove_file(proc, fd->node);
+  }
+
   // free all allocated page
   MemoryRegion* memory = proc->memory.head;
   while (memory) {
@@ -232,6 +240,11 @@ void proc_remove_file(Proc* proc, fs::Node* file) {
   util::List<FileDescriptor>::Remove<&FileDescriptor::prev,
                                      &FileDescriptor::next>(
       desc, &proc->files.head, &proc->files.tail);
+
+  if (desc) {
+    delete desc->node;
+    delete desc;
+  }
 }
 
 void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
