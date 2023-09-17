@@ -134,6 +134,12 @@ void sys_call_close(StackFrame* frame) {
     return;
   }
 
+  if (frame->ebx < 0x100000) {
+    // FIXME: this is a stdio file descriptor
+    frame->eax = 0;
+    return;
+  }
+
   auto fs_node = reinterpret_cast<fs::Node*>(frame->ebx);
 
   auto proc = reinterpret_cast<Proc*>(frame);
