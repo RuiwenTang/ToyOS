@@ -73,8 +73,23 @@ extern "C" int32_t ide_dev_bwrite(ext4_blockdev* bdev, const void* buf,
     return ENODEV;
   }
 
-  if (ide_ata_access(1, g_device_index, blk_id, blk_cnt, (uint8_t*)buf)) {
-    return ENODEV;
+  uint32_t max_write = 255;
+  uint8_t* p_buf = (uint8_t*)buf;
+
+  while (blk_cnt >= max_write) {
+    if (ide_ata_access(1, g_device_index, blk_id, max_write, p_buf)) {
+      return ENODEV;
+    }
+
+    blk_id += max_write;
+    blk_cnt -= max_write;
+    p_buf += max_write * SECTOR_SIZE;
+  }
+
+  if (blk_cnt > 0) {
+    if (ide_ata_access(1, g_device_index, blk_id, blk_cnt, p_buf)) {
+      return ENODEV;
+    }
   }
 
   return EOK;
@@ -148,7 +163,7 @@ Ext4FSNode::Ext4FSNode(const char* name, ext4_blockdev* dev)
 Node* Ext4FSNode::Open(const char* name, uint32_t flags, uint32_t mode) {
   ext4_file* file = new ext4_file;
 
-  auto r = ext4_fopen(file, name, "r");
+  auto r = ext4_fopen2(file, name, flags);
 
   if (r != EOK) {
     delete file;

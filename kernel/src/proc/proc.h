@@ -15,6 +15,10 @@ typedef struct proc Proc;
  */
 Proc* init_proc(uint32_t init_size);
 
+void proc_set_pwd(Proc* proc, const char* path);
+
+const char* proc_get_pwd(Proc* proc);
+
 void proc_add_memory(Proc* proc, uint32_t base, uint32_t length);
 
 /**

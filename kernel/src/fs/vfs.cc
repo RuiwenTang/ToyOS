@@ -105,8 +105,6 @@ void sys_call_open(StackFrame* frame) {
 
   uint32_t flags = frame->ecx;
 
-  (void)flags;  // ignore flags for now
-
   auto root_node = RootFSNode::GetRootNode();
 
   auto fs_node = root_node->Open(name, flags, 0);

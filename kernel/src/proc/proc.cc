@@ -49,6 +49,8 @@ typedef struct proc {
   util::List<MemoryRegion> memory;
   util::List<FileDescriptor> files;
 
+  char* pwd;
+
   proc* ready_prev;
   proc* ready_next;
   proc* suspend_prev;
@@ -97,6 +99,24 @@ Proc* init_proc(uint32_t init_size) {
 
   return p;
 }
+
+void proc_set_pwd(Proc* proc, const char* path) {
+  // for now the path must be absolute
+  size_t len = strlen(path);
+
+  size_t last_index = len;
+  while (path[last_index] != '/' && last_index >= 0) {
+    last_index--;
+  }
+
+  proc->pwd = (char*)kmalloc(last_index + 2);
+
+  memcpy(proc->pwd, path, last_index + 1);
+
+  proc->pwd[last_index + 1] = '\0';
+}
+
+const char* proc_get_pwd(Proc* proc) { return proc->pwd; }
 
 void proc_add_memory(Proc* proc, uint32_t base, uint32_t length) {
   // step 1 add memory region into proc memory region list

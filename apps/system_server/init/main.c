@@ -23,5 +23,13 @@ int main(int argc, const char** argv) {
   ptr = malloc(20);
   printf("ptr again from malloc is %p \n", ptr);
 
+
+  FILE* file = fopen("readme.txt", "w+");
+
+  if (file) {
+    printf("open file success \n");
+    fclose(file);
+  }
+
   return 0;
 }

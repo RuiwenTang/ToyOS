@@ -62,6 +62,7 @@ int load_and_exec(const char* path) {
 
   Proc* proc = init_proc(total_size);
 
+  proc_set_pwd(proc, path);
   // prepare proc regs
   proc_get_stackframe(proc)->cs = USER_CODE_SELECTOR;
   proc_get_stackframe(proc)->ds = USER_DATA_SELECTOR;
