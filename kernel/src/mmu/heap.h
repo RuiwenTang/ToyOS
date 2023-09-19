@@ -12,6 +12,8 @@ void heap_init(void* base, uint32_t size);
 
 void* kmalloc(size_t size);
 
+void* krealloc(void* ptr, size_t size);
+
 void kfree(void*);
 
 #ifdef __cplusplus

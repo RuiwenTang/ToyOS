@@ -40,7 +40,9 @@ uint32_t proc_get_maped_base(Proc* proc);
 
 uint32_t proc_get_maped_length(Proc* proc);
 
-void proc_insert_file(Proc* proc, fs::Node* file);
+uint16_t proc_insert_file(Proc* proc, fs::Node* file);
+
+fs::Node* proc_get_file_by_id(Proc* proc, uint16_t id);
 
 void proc_remove_file(Proc* proc, fs::Node* file);
 

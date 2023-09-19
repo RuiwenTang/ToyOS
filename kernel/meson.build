@@ -15,23 +15,24 @@ kernel_src = [
   ]),
   'include/driver/pci/ide.h',
   'include/driver/pci/pci.h',
-  'include/util/list.hpp',
   'include/sys/mman.h',
+  'include/util/list.hpp',
+  'include/util/string_view.hpp',
   'klibc/stdio.h',
+  'klibc/stdlib.c',
+  'klibc/stdlib.h',
   'klibc/string.c',
   'klibc/string.h',
-  'klibc/stdlib.h',
-  'klibc/stdlib.c',
   'src/driver/pci/ide.c',
   'src/driver/pci/pci.c',
   'src/elf/elf_file_impl.cc',
   'src/elf/elf_file_impl.hpp',
   'src/elf/elf_loader.cc',
   'src/elf/elf_loader.hpp',
-  'src/fs/mem/std_fs.cc',
-  'src/fs/mem/std_fs.hpp',
   'src/fs/ext4/ext4_fs.cc',
   'src/fs/ext4/ext4_fs.hpp',
+  'src/fs/mem/std_fs.cc',
+  'src/fs/mem/std_fs.hpp',
   'src/fs/vfs.cc',
   'src/fs/vfs.hpp',
   'src/kmain.cc',
@@ -52,6 +53,7 @@ kernel_src = [
   'src/screen/screen.h',
   'src/syscall/syscall.cc',
   'src/syscall/syscall.h',
+  'src/util/string_view.cc',
   'src/x86/gdt.c',
   'src/x86/gdt.h',
   'src/x86/idt.c',
@@ -117,5 +119,18 @@ executable(
   c_args: [ '-DTOY_DEBUG' ],
   cpp_args: [ '-std=c++17', '-DTOY_DEBUG' ],
   dependencies: [ gtest ],
-  )
+)
+
+executable(
+  'string_view_test',
+  native: true,
+  sources: [ 
+    'include/util/string_view.hpp',
+    'src/util/string_view.cc',
+    'src/util/string_view_test.cc'
+  ],
+  include_directories: [ './include' ],
+  cpp_args: [ '-std=c++17', ],
+  dependencies: [ gtest ],
+)
 

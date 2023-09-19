@@ -33,6 +33,7 @@ struct FileDescriptor {
   fs::Node* node = {};
   FileDescriptor* prev = {};
   FileDescriptor* next = {};
+  uint16_t id = 1;
 };
 
 typedef struct proc {
@@ -221,14 +222,13 @@ void proc_remove_memory_region(Proc* proc, uint32_t base, uint32_t length) {
   }
 }
 
-void proc_insert_file(Proc* proc, fs::Node* file) {
+uint16_t proc_insert_file(Proc* proc, fs::Node* file) {
   auto head = proc->files.head;
 
   while (head) {
     if (head->node == file) {
-      return;
+      return head->id;
     }
-
     head = head->next;
   }
 
@@ -236,11 +236,29 @@ void proc_insert_file(Proc* proc, fs::Node* file) {
 
   auto desc = new FileDescriptor;
 
+  if (proc->files.tail) {
+    desc->id = proc->files.tail->id + 1;
+  }
+
   desc->node = file;
 
   util::List<FileDescriptor>::Insert<&FileDescriptor::prev,
                                      &FileDescriptor::next>(
       desc, proc->files.tail, nullptr, &proc->files.head, &proc->files.tail);
+  return desc->id;
+}
+
+fs::Node* proc_get_file_by_id(Proc* proc, uint16_t id) {
+  auto head = proc->files.head;
+
+  while (head) {
+    if (head->id == id) {
+      return head->node;
+    }
+    head = head->next;
+  }
+
+  return nullptr;
 }
 
 void proc_remove_file(Proc* proc, fs::Node* file) {

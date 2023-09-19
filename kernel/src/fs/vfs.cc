@@ -7,6 +7,7 @@
 #include "kprintf.h"
 #include "proc/proc.h"
 #include "util/list.hpp"
+#include "util/string_view.hpp"
 
 namespace fs {
 
@@ -35,8 +36,9 @@ class RootFSNode : public Node {
     // try open new fs node
 
     // "/" is ext4 fs
-    if (strcmp(name, "/") == 0) {
-      return nullptr;
+    if (name[0] == '/') {
+      // try open with default ext4 fs node
+      return GetDefault()->Open(name, flags, mode);
     }
 
     return nullptr;
@@ -53,10 +55,17 @@ class RootFSNode : public Node {
   void RegisterChild(Node* child) {
     util::List<Node>::Insert<&Node::prev_in_parent, &Node::next_in_parent>(
         child, m_children.tail, nullptr, &m_children.head, &m_children.tail);
+
+    if (strcmp(child->m_name, "/") == 0) {
+      m_default = child;
+    }
   }
+
+  Node* GetDefault() { return m_default; }
 
  private:
   util::List<Node> m_children;
+  Node* m_default;
 };
 
 RootFSNode* g_root_fs = nullptr;
@@ -103,11 +112,26 @@ void sys_call_open(StackFrame* frame) {
     return;
   }
 
+  auto proc = reinterpret_cast<Proc*>(frame);
+
+  util::StringView path = name;
+
+  // this is a relative
+  if (path[0] != '/') {
+    path = proc_get_pwd(proc);
+
+    if (path[path.size() - 1] != '/') {
+      path += "/";
+    }
+
+    path += name;
+  }
+
   uint32_t flags = frame->ecx;
 
   auto root_node = RootFSNode::GetRootNode();
 
-  auto fs_node = root_node->Open(name, flags, 0);
+  auto fs_node = root_node->Open(path.c_str(), flags, 0);
 
   if (fs_node == nullptr) {
     // failed open file
@@ -115,11 +139,9 @@ void sys_call_open(StackFrame* frame) {
     return;
   }
 
-  auto proc = reinterpret_cast<Proc*>(frame);
+  auto fd = proc_insert_file(proc, fs_node);
 
-  proc_insert_file(proc, fs_node);
-
-  frame->eax = reinterpret_cast<uint32_t>(fs_node);
+  frame->eax = fd;
 }
 
 /**
@@ -132,15 +154,20 @@ void sys_call_close(StackFrame* frame) {
     return;
   }
 
-  if (frame->ebx < 0x100000) {
+  if (frame->ebx == 0) {
     // FIXME: this is a stdio file descriptor
     frame->eax = 0;
     return;
   }
 
-  auto fs_node = reinterpret_cast<fs::Node*>(frame->ebx);
-
   auto proc = reinterpret_cast<Proc*>(frame);
+
+  auto fs_node = proc_get_file_by_id(proc, frame->ebx);
+
+  if (fs_node == nullptr) {
+    frame->eax = -1;
+    return;
+  }
 
   fs_node->Close();
 

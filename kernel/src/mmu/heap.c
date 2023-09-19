@@ -14,4 +14,6 @@ void heap_init(void* base, uint32_t size) {
 
 void* kmalloc(size_t size) { return umm_malloc(size); }
 
+void* krealloc(void* ptr, size_t size) { return umm_realloc(ptr, size); }
+
 void kfree(void* ptr) { umm_free(ptr); }
