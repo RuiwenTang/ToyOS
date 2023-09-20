@@ -209,7 +209,15 @@ uint32_t Ext4FileNode::Read(uint32_t size, uint8_t* buf) {
 
 uint32_t Ext4FileNode::Write(uint32_t size, uint8_t* buf) {
   // TODO: Implement this function
-  return 0;
+  size_t cnt = 0;
+
+  auto ret = ext4_fwrite(m_file, buf, size, &cnt);
+
+  if (ret != EOK) {
+    return 0;
+  }
+
+  return cnt;
 }
 
 bool Ext4FileNode::Seek(uint32_t offset) {
@@ -223,6 +231,7 @@ void Ext4FileNode::Close() {
     ext4_fclose(m_file);
 
     delete m_file;
+    m_file = nullptr;
   }
 }
 

@@ -15,6 +15,7 @@ extern "C" {
 #define SYS_CALL_UNMAP 3
 #define SYS_CALL_OPEN 4
 #define SYS_CALL_CLOSE 5
+#define SYS_CALL_READ 6
 
 void sys_call_init();
 

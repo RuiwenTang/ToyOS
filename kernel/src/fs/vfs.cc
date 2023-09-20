@@ -154,7 +154,7 @@ void sys_call_close(StackFrame* frame) {
     return;
   }
 
-  if (frame->ebx == 0) {
+  if (frame->ebx < 4) {
     // FIXME: this is a stdio file descriptor
     frame->eax = 0;
     return;
@@ -174,6 +174,68 @@ void sys_call_close(StackFrame* frame) {
   proc_remove_file(proc, fs_node);
 
   frame->eax = 0;
+}
+
+/**
+ * ebx -> file id
+ * ecx -> buffer pointer
+ * edx -> buffer len
+ */
+void sys_call_write(StackFrame* frame) {
+  if (frame->ebx < 4) {
+    frame->eax = -1;
+    return;
+  }
+
+  if (frame->ecx <= 0x80000000) {
+    frame->eax = -1;
+    return;
+  }
+
+  auto proc = reinterpret_cast<Proc*>(frame);
+
+  auto fs_node = proc_get_file_by_id(proc, frame->ebx);
+
+  if (fs_node == nullptr) {
+    frame->eax = -2;
+    return;
+  }
+
+  auto buf = reinterpret_cast<uint8_t*>(frame->ecx);
+  auto len = frame->edx;
+
+  frame->eax = fs_node->Write(len, buf);
+}
+
+/**
+ * ebx -> file id
+ * ecx -> buffer pointer
+ * edx -> buffer len
+ */
+void sys_call_read(StackFrame* frame) {
+  if (frame->ebx < 4) {
+    frame->eax = -1;
+    return;
+  }
+
+  if (frame->ecx <= 0x80000000) {
+    frame->eax = -1;
+    return;
+  }
+
+  auto proc = reinterpret_cast<Proc*>(frame);
+
+  auto fs_node = proc_get_file_by_id(proc, frame->ebx);
+
+  if (fs_node == nullptr) {
+    frame->eax = -2;
+    return;
+  }
+
+  auto buf = reinterpret_cast<uint8_t*>(frame->ecx);
+  auto len = frame->edx;
+
+  frame->eax = fs_node->Read(len, buf);
 }
 
 }  // namespace fs

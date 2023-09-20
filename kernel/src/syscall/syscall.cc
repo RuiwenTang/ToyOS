@@ -27,7 +27,7 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     if (frame->ebx == 1) {
       print_sys_call(frame);
     } else {
-      // TODO : support normal fs write support
+      fs::sys_call_write(frame);
     }
   } else if (frame->eax == SYS_CALL_MMAP) {
     mmu::sys_call_mmap(frame);
@@ -37,6 +37,8 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     fs::sys_call_open(frame);
   } else if (frame->eax == SYS_CALL_CLOSE) {
     fs::sys_call_close(frame);
+  } else if (frame->eax == SYS_CALL_READ) {
+    fs::sys_call_read(frame);
   }
 }
 

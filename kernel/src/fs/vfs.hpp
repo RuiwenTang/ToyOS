@@ -61,6 +61,10 @@ void sys_call_open(StackFrame* frame);
 
 void sys_call_close(StackFrame* frame);
 
+void sys_call_write(StackFrame* frame);
+
+void sys_call_read(StackFrame* frame);
+
 }  // namespace fs
 
 #endif  // TOY_KERNEL_VFS_H

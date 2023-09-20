@@ -33,7 +33,7 @@ struct FileDescriptor {
   fs::Node* node = {};
   FileDescriptor* prev = {};
   FileDescriptor* next = {};
-  uint16_t id = 1;
+  uint16_t id = 4;  // 1: stdout, 2: stderr, 3: TBD
 };
 
 typedef struct proc {

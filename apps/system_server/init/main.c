@@ -1,6 +1,8 @@
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, const char** argv) {
   char buf[50];
@@ -23,11 +25,32 @@ int main(int argc, const char** argv) {
   ptr = malloc(20);
   printf("ptr again from malloc is %p \n", ptr);
 
-
   FILE* file = fopen("readme.txt", "w+");
 
   if (file) {
     printf("open file success \n");
+
+    const char* str = "hello world!";
+    size_t len = strlen(str);
+
+    uint32_t ret = fwrite(str, len, 1, file);
+
+    printf("fwrite ret = %d \n", ret);
+
+    fclose(file);
+  }
+
+  file = fopen("readme.txt", "r");
+
+  if (file) {
+    char buf[20];
+
+    uint32_t ret = fread(buf, 1, 20, file);
+
+    printf("fread ret = %d \n", ret);
+
+    printf("read from file : [%s] \n", buf);
+
     fclose(file);
   }
 
