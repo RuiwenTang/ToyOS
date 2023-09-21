@@ -39,6 +39,8 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     fs::sys_call_close(frame);
   } else if (frame->eax == SYS_CALL_READ) {
     fs::sys_call_read(frame);
+  } else if (frame->eax == SYS_CALL_SEEK) {
+    fs::sys_call_seek(frame);
   }
 }
 

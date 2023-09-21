@@ -48,7 +48,7 @@ class RootFSNode : public Node {
 
   uint32_t Write(uint32_t size, uint8_t* buf) override { return 0; }
 
-  bool Seek(uint32_t offset) override { return false; }
+  bool Seek(uint32_t offset, uint32_t origin) override { return false; }
 
   void Close() override {}
 
@@ -236,6 +236,38 @@ void sys_call_read(StackFrame* frame) {
   auto len = frame->edx;
 
   frame->eax = fs_node->Read(len, buf);
+}
+
+/**
+ * ebx -> file id
+ * ecx -> seek offset
+ * edx -> seek origin
+ */
+void sys_call_seek(StackFrame* frame) {
+  if (frame->ebx < 4) {
+    frame->eax = -1;
+    return;
+  }
+
+  auto proc = reinterpret_cast<Proc*>(frame);
+
+  auto fs_node = proc_get_file_by_id(proc, frame->ebx);
+
+  if (fs_node == nullptr) {
+    frame->eax = -2;
+    return;
+  }
+
+  auto offset = frame->ecx;
+  auto origin = frame->edx;
+
+  auto success = fs_node->Seek(offset, origin);
+
+  if (success) {
+    frame->eax = 0;
+  } else {
+    frame->eax = -1;
+  }
 }
 
 }  // namespace fs

@@ -15,6 +15,7 @@ kernel_src = [
   ]),
   'include/driver/pci/ide.h',
   'include/driver/pci/pci.h',
+  'include/sys/fcntl.h',
   'include/sys/mman.h',
   'include/util/list.hpp',
   'include/util/string_view.hpp',

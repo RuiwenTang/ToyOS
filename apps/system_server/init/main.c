@@ -45,7 +45,11 @@ int main(int argc, const char** argv) {
   if (file) {
     char buf[20];
 
-    uint32_t ret = fread(buf, 1, 20, file);
+    uint32_t ret = fseek(file, 6, SEEK_SET);
+
+    printf("fseek ret = %d \n", ret);
+
+    ret = fread(buf, 1, 20, file);
 
     printf("fread ret = %d \n", ret);
 

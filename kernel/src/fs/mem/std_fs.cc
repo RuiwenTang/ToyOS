@@ -22,7 +22,7 @@ uint32_t StdFSNode::Write(uint32_t size, uint8_t* buf) {
   return size;
 }
 
-bool StdFSNode::Seek(uint32_t offset) { return false; }
+bool StdFSNode::Seek(uint32_t offset, uint32_t origin) { return false; }
 
 void StdFSNode::Close() { m_open_count--; }
 

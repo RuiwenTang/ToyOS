@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "proc/stack_frame.h"
+#include "sys/fcntl.h"
 
 #define PATH_SEPARATOR '/'
 #define PATH_SEPARATOR_STRING "/"
@@ -37,7 +38,7 @@ class Node {
 
   virtual uint32_t Write(uint32_t size, uint8_t* buf) = 0;
 
-  virtual bool Seek(uint32_t offset) = 0;
+  virtual bool Seek(uint32_t offset, uint32_t origin) = 0;
 
   static Node* GetRootNode();
 
@@ -64,6 +65,8 @@ void sys_call_close(StackFrame* frame);
 void sys_call_write(StackFrame* frame);
 
 void sys_call_read(StackFrame* frame);
+
+void sys_call_seek(StackFrame* frame);
 
 }  // namespace fs
 

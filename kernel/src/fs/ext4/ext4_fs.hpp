@@ -18,7 +18,7 @@ class Ext4FSNode : public Node {
 
   uint32_t Write(uint32_t size, uint8_t* buf) override;
 
-  bool Seek(uint32_t offset) override;
+  bool Seek(uint32_t offset, uint32_t origin) override;
 
   void Close() override;
 
@@ -41,7 +41,7 @@ class Ext4FileNode : public Node {
 
   uint32_t Write(uint32_t size, uint8_t* buf) override;
 
-  bool Seek(uint32_t offset) override;
+  bool Seek(uint32_t offset, uint32_t origin) override;
 
   void Close() override;
 

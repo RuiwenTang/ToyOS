@@ -177,7 +177,7 @@ uint32_t Ext4FSNode::Read(uint32_t size, uint8_t* buf) { return 0; }
 
 uint32_t Ext4FSNode::Write(uint32_t size, uint8_t* buf) { return 0; }
 
-bool Ext4FSNode::Seek(uint32_t offset) { return false; }
+bool Ext4FSNode::Seek(uint32_t offset, uint32_t origin) { return false; }
 
 void Ext4FSNode::Close() {}
 
@@ -220,8 +220,8 @@ uint32_t Ext4FileNode::Write(uint32_t size, uint8_t* buf) {
   return cnt;
 }
 
-bool Ext4FileNode::Seek(uint32_t offset) {
-  auto ret = ext4_fseek(m_file, offset, SEEK_SET);
+bool Ext4FileNode::Seek(uint32_t offset, uint32_t origin) {
+  auto ret = ext4_fseek(m_file, offset, origin);
 
   return ret == EOK;
 }

@@ -34,7 +34,7 @@ bool ElfFileImpl::OnSeek(uint32_t offset) {
     return false;
   }
 
-  return m_node->Seek(offset);
+  return m_node->Seek(offset, SEEK_SET);
 }
 
 bool ElfFileImpl::OnRead(char* buf, uint32_t size) {
