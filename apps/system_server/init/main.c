@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 int main(int argc, const char** argv) {
   char buf[50];
@@ -57,6 +58,10 @@ int main(int argc, const char** argv) {
 
     fclose(file);
   }
+
+  int id = getpid();
+
+  printf("getpid : %d\n", id);
 
   return 0;
 }

@@ -41,6 +41,8 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     fs::sys_call_read(frame);
   } else if (frame->eax == SYS_CALL_SEEK) {
     fs::sys_call_seek(frame);
+  } else if (frame->eax == SYS_CALL_GETPID) {
+    frame->eax = proc_get_pid(reinterpret_cast<Proc*>(frame));
   }
 }
 

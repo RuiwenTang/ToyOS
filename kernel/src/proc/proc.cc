@@ -63,7 +63,7 @@ Proc* current_proc = NULL;
 util::List<Proc> suspend_list{};
 util::List<Proc> ready_list{};
 
-uint32_t proc_count = 0;
+uint32_t g_proc_id = 0;
 
 typedef Proc*(list_get_next)(Proc*);
 typedef void(list_set_next)(Proc*, Proc*);
@@ -74,6 +74,8 @@ Proc* init_proc(uint32_t init_size) {
   init_size = SIZE_ALIGN_4K(init_size);
   Proc* p = (Proc*)kmalloc(sizeof(Proc));
   memset(p, 0, sizeof(Proc));
+  g_proc_id++;
+  p->pid = g_proc_id;
 
   // page mapping for this proc
   uint32_t proc_ptd = palloc_allocate(PROC_PAGE_MAP_SIZE);
@@ -139,6 +141,8 @@ void switch_to_ready(Proc* proc) {
 
   current_proc = ready_list.head;
 }
+
+uint32_t proc_get_pid(Proc* proc) { return proc->pid; }
 
 StackFrame* proc_get_stackframe(Proc* proc) { return &proc->regs; }
 

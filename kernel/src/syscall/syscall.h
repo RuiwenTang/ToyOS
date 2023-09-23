@@ -17,6 +17,7 @@ extern "C" {
 #define SYS_CALL_CLOSE 5
 #define SYS_CALL_READ 6
 #define SYS_CALL_SEEK 7
+#define SYS_CALL_GETPID 8
 
 void sys_call_init();
 

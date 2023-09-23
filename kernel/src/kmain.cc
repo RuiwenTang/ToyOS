@@ -17,8 +17,6 @@
 #include "x86/irq.h"
 #include "x86/timer.h"
 
-uint8_t temp_stack[1024];
-
 void system_init(multiboot_info_t* info, uint32_t stack) {
   gdt_install(stack);
 
