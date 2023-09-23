@@ -154,6 +154,10 @@ uint32_t proc_get_maped_base(Proc* proc) { return proc->mapd_base; }
 
 uint32_t proc_get_maped_length(Proc* proc) { return proc->mapd_length; }
 
+void proc_grow_maped_length(Proc* proc, uint32_t size) {
+  proc->mapd_length += size;
+}
+
 void proc_exit(Proc* proc) {
   util::List<Proc>::Remove<&Proc::suspend_prev, &Proc::suspend_next>(
       current_proc, &suspend_list.head, &suspend_list.tail);
@@ -360,4 +364,36 @@ void proc_switch() {
 
   mmu::load_proc(current_proc);
   proc_restart();
+}
+
+Proc* proc_fork(Proc* proc) {
+  Proc* new_proc = reinterpret_cast<Proc*>(kmalloc(sizeof(Proc)));
+
+  memset(new_proc, 0, sizeof(Proc));
+
+  g_proc_id++;
+
+  new_proc->pid = g_proc_id;
+  new_proc->mapd_base = proc->mapd_base;
+  new_proc->mapd_length = proc->mapd_length;
+  new_proc->stack_top = proc->stack_top;
+
+  new_proc->page_table = palloc_allocate(PROC_PAGE_MAP_SIZE);
+
+  // allocate physical memory for new process and copy parent memory into it
+  uint32_t p_addr = palloc_allocate(new_proc->mapd_length);
+
+  memcpy(reinterpret_cast<void*>(p_addr),
+         reinterpret_cast<void*>(proc->mapd_base), new_proc->mapd_length);
+
+  proc_map_address(new_proc, new_proc->mapd_base, p_addr,
+                   new_proc->mapd_length);
+
+  proc_add_memory(new_proc, p_addr, new_proc->mapd_length);
+
+  // copy all registers
+  memcpy(reinterpret_cast<void*>(&new_proc->regs),
+         reinterpret_cast<void*>(&proc->regs), sizeof(StackFrame));
+
+  return new_proc;
 }

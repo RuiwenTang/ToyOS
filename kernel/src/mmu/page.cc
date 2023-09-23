@@ -246,6 +246,8 @@ void sys_call_mmap(StackFrame* frame) {
   v_addr = Align4k(v_addr);
   proc_map_address(proc, v_addr, p_addr, size);
 
+  proc_grow_maped_length(proc, size);
+
   // return v_addr to caller
   frame->eax = v_addr;
 }

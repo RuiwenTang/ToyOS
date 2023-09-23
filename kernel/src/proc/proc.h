@@ -42,6 +42,8 @@ uint32_t proc_get_maped_base(Proc* proc);
 
 uint32_t proc_get_maped_length(Proc* proc);
 
+void proc_grow_maped_length(Proc* proc, uint32_t size);
+
 uint16_t proc_insert_file(Proc* proc, fs::Node* file);
 
 fs::Node* proc_get_file_by_id(Proc* proc, uint16_t id);
@@ -58,5 +60,7 @@ uint32_t proc_phy_address(Proc* proc, uint32_t v_addr);
 void proc_switch();
 
 void proc_exit(Proc* proc);
+
+Proc* proc_fork(Proc* proc);
 
 #endif  // TOY_PROC_PROC_H
