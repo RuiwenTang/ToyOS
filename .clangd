@@ -2,4 +2,5 @@
 CompileFlags:
   CompilationDatabase: build
   Remove: [--driver-mode=*, -resource-dir=*]
+  Add: [-D__toyos__]
 
