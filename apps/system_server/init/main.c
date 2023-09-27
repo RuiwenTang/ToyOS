@@ -63,5 +63,9 @@ int main(int argc, const char** argv) {
 
   printf("getpid : %d\n", id);
 
+  int fork_ret = fork();
+
+  printf("fork_ret = %d\n", fork_ret);
+
   return 0;
 }

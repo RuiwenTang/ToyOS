@@ -52,6 +52,8 @@ kernel_src = [
   'src/runtime.cc',
   'src/screen/screen.c',
   'src/screen/screen.h',
+  'src/syscall/sys_fork.cc',
+  'src/syscall/sys_fork.hpp',
   'src/syscall/syscall.cc',
   'src/syscall/syscall.h',
   'src/util/string_view.cc',

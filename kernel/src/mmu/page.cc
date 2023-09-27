@@ -203,6 +203,8 @@ void load_proc(Proc* p) {
 
     proc_pt += 0x1000;
   }
+
+  page_load_directory(g_pd);
 }
 
 /**

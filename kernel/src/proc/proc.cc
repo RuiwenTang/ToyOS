@@ -137,7 +137,7 @@ void suspend_proc(Proc* proc) {
 
 void switch_to_ready(Proc* proc) {
   util::List<Proc>::Insert<&Proc::ready_prev, &Proc::ready_next>(
-      proc, nullptr, ready_list.head, &ready_list.head, &ready_list.tail);
+      proc, ready_list.tail, nullptr, &ready_list.head, &ready_list.tail);
 
   current_proc = ready_list.head;
 }
@@ -318,6 +318,24 @@ void proc_map_address(Proc* proc, uint32_t v_addr, uint32_t p_addr,
   }
 }
 
+void proc_copy_page_and_map(Proc* new_proc, Proc* proc, uint32_t p_addr) {
+  if (new_proc->mapd_length != proc->mapd_length) {
+    kpanicf("two process has different memory size !!");
+  }
+
+  uint32_t count = proc->mapd_length / 0x1000;
+
+  auto new_pt = reinterpret_cast<Page*>(new_proc->page_table);
+  auto old_pt = reinterpret_cast<Page*>(proc->page_table);
+
+  for (uint32_t i = 0; i < count; i++) {
+    new_pt[i] = old_pt[i];
+    new_pt[i].address = p_addr >> 12;
+
+    p_addr += 0x1000;
+  }
+}
+
 void proc_unmmap_address(proc* proc, uint32_t v_addr, uint32_t size) {
   if (v_addr < PROC_MEMORY_BASE) {
     return;
@@ -386,10 +404,9 @@ Proc* proc_fork(Proc* proc) {
   memcpy(reinterpret_cast<void*>(p_addr),
          reinterpret_cast<void*>(proc->mapd_base), new_proc->mapd_length);
 
-  proc_map_address(new_proc, new_proc->mapd_base, p_addr,
-                   new_proc->mapd_length);
-
   proc_add_memory(new_proc, p_addr, new_proc->mapd_length);
+
+  proc_copy_page_and_map(new_proc, proc, p_addr);
 
   // copy all registers
   memcpy(reinterpret_cast<void*>(&new_proc->regs),

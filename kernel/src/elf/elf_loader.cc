@@ -102,7 +102,6 @@ int load_and_exec(const char* path) {
   impl.Close();
 
   switch_to_ready(proc);
-  proc_switch();
 
   return 0;
 }

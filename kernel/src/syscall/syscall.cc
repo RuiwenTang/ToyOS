@@ -7,6 +7,7 @@
 #include "mmu/page.hpp"
 #include "proc/proc.h"
 #include "screen/screen.h"
+#include "syscall/sys_fork.hpp"
 #include "x86/isr.h"
 
 // this is for debug
@@ -43,6 +44,8 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     fs::sys_call_seek(frame);
   } else if (frame->eax == SYS_CALL_GETPID) {
     frame->eax = proc_get_pid(reinterpret_cast<Proc*>(frame));
+  } else if (frame->eax == SYS_CALL_FORK) {
+    sys::sys_call_fork(frame);
   }
 }
 
