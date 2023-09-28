@@ -132,8 +132,8 @@ executable(
     'src/util/string_view.cc',
     'src/util/string_view_test.cc'
   ],
-  include_directories: [ './include' ],
-  cpp_args: [ '-std=c++17', ],
+  include_directories: [ './include/util' ],
+  cpp_args: [ '-std=c++17', '-DTOY_HOST_TEST'],
   dependencies: [ gtest ],
 )
 

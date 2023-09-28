@@ -1,9 +1,9 @@
 
-#include "util/string_view.hpp"
+#include "string_view.hpp"
+
+#include <gtest/gtest.h>
 
 #include <cstring>
-
-#include "gtest/gtest.h"
 
 TEST(StringView, create) {
   util::StringView empty_str;

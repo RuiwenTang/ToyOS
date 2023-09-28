@@ -1,4 +1,8 @@
+#ifdef TOY_HOST_TEST
+#include "string_view.hpp"
+#else
 #include "util/string_view.hpp"
+#endif
 
 #include <string.h>
 
