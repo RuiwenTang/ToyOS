@@ -8,6 +8,14 @@ struct proc;
 
 typedef struct proc Proc;
 
+struct FileDescriptor;
+
+void file_desc_retain(struct FileDescriptor* fd);
+
+fs::Node* file_desc_get_file(struct FileDescriptor* fd);
+
+uint16_t file_desc_get_id(struct FileDescriptor* fd);
+
 /**
  * @brief alloc a process control block
  *
@@ -47,6 +55,8 @@ void proc_grow_maped_length(Proc* proc, uint32_t size);
 uint16_t proc_insert_file(Proc* proc, fs::Node* file);
 
 fs::Node* proc_get_file_by_id(Proc* proc, uint16_t id);
+
+struct FileDescriptor* proc_get_fd_by_path(Proc* proc, const char* path);
 
 void proc_remove_file(Proc* proc, fs::Node* file);
 

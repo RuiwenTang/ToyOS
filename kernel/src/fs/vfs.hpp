@@ -42,6 +42,12 @@ class Node {
 
   static Node* GetRootNode();
 
+  int32_t GetOpenCount() const { return m_open_count; }
+
+  void RetainOpen();
+
+  void ReleaseOpen();
+
  protected:
   void SetSize(uint32_t size) { m_size = size; }
 
@@ -50,6 +56,7 @@ class Node {
   uint32_t m_flags;
   uint32_t m_mode;
   uint32_t m_size;
+  int32_t m_open_count = 0;
 
   // List in parent children
   Node* prev_in_parent = nullptr;

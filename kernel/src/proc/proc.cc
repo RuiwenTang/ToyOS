@@ -36,6 +36,12 @@ struct FileDescriptor {
   uint16_t id = 4;  // 1: stdout, 2: stderr, 3: TBD
 };
 
+void file_desc_retain(struct FileDescriptor* fd) { fd->node->ReleaseOpen(); }
+
+fs::Node* file_desc_get_file(struct FileDescriptor* fd) { return fd->node; }
+
+uint16_t file_desc_get_id(struct FileDescriptor* fd) { return fd->id; }
+
 typedef struct proc {
   StackFrame regs;
   int32_t ticks;
@@ -171,8 +177,19 @@ void proc_exit(Proc* proc) {
   FileDescriptor* fd = proc->files.head;
 
   while (fd) {
-    fd->node->Close();
-    proc_remove_file(proc, fd->node);
+    fd->node->ReleaseOpen();
+
+    if (fd->node->GetOpenCount() <= 0) {
+      fd->node->Close();
+
+      delete fd->node;
+    }
+
+    auto ptr = fd;
+
+    fd = fd->next;
+
+    delete ptr;
   }
 
   // free all allocated page
@@ -269,6 +286,20 @@ fs::Node* proc_get_file_by_id(Proc* proc, uint16_t id) {
   return nullptr;
 }
 
+struct FileDescriptor* proc_get_fd_by_path(Proc* proc, const char* path) {
+  auto head = proc->files.head;
+
+  while (head) {
+    if (strcmp(head->node->GetName(), path) == 0) {
+      return head;
+    }
+
+    head = head->next;
+  }
+
+  return nullptr;
+}
+
 void proc_remove_file(Proc* proc, fs::Node* file) {
   FileDescriptor* desc = nullptr;
 
@@ -288,7 +319,6 @@ void proc_remove_file(Proc* proc, fs::Node* file) {
       desc, &proc->files.head, &proc->files.tail);
 
   if (desc) {
-    delete desc->node;
     delete desc;
   }
 }
@@ -411,6 +441,24 @@ Proc* proc_fork(Proc* proc) {
   // copy all registers
   memcpy(reinterpret_cast<void*>(&new_proc->regs),
          reinterpret_cast<void*>(&proc->regs), sizeof(StackFrame));
+
+  // copy all opened files
+  auto fd = proc->files.head;
+
+  while (fd) {
+    auto new_fd = new FileDescriptor;
+    new_fd->node = fd->node;
+    new_fd->node->RetainOpen();
+
+    new_fd->id = fd->id;
+
+    util::List<FileDescriptor>::Insert<&FileDescriptor::prev,
+                                       &FileDescriptor::next>(
+        new_fd, new_proc->files.tail, nullptr, &new_proc->files.head,
+        &new_proc->files.tail);
+
+    fd = fd->next;
+  }
 
   return new_proc;
 }

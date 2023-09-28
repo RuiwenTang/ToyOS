@@ -16,7 +16,15 @@ Node::Node(const char* name, uint32_t flags, uint32_t mode) {
   m_flags = flags;
   m_mode = mode;
   m_size = 0;
+  m_open_count = 1;
 }
+
+void Node::RetainOpen() {
+  // TODO add some lock
+  m_open_count++;
+}
+
+void Node::ReleaseOpen() { m_open_count--; }
 
 class RootFSNode : public Node {
  public:
@@ -127,6 +135,14 @@ void sys_call_open(StackFrame* frame) {
     path += name;
   }
 
+  auto fd = proc_get_fd_by_path(proc, path.c_str());
+
+  if (fd) {
+    file_desc_retain(fd);
+    frame->eax = file_desc_get_id(fd);
+    return;
+  }
+
   uint32_t flags = frame->ecx;
 
   auto root_node = RootFSNode::GetRootNode();
@@ -139,9 +155,7 @@ void sys_call_open(StackFrame* frame) {
     return;
   }
 
-  auto fd = proc_insert_file(proc, fs_node);
-
-  frame->eax = fd;
+  frame->eax = proc_insert_file(proc, fs_node);
 }
 
 /**
@@ -169,9 +183,13 @@ void sys_call_close(StackFrame* frame) {
     return;
   }
 
-  fs_node->Close();
-
   proc_remove_file(proc, fs_node);
+
+  fs_node->ReleaseOpen();
+  if (fs_node->GetOpenCount() <= 0) {
+    fs_node->Close();
+    delete fs_node;
+  }
 
   frame->eax = 0;
 }

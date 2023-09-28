@@ -55,8 +55,6 @@ int main(int argc, const char** argv) {
     printf("fread ret = %d \n", ret);
 
     printf("read from file : [%s] \n", buf);
-
-    fclose(file);
   }
 
   int id = getpid();
@@ -66,6 +64,25 @@ int main(int argc, const char** argv) {
   int fork_ret = fork();
 
   printf("fork_ret = %d\n", fork_ret);
+
+  if (fork_ret == 0) {
+    // this is child process
+    printf("[child proc] get parent value cos(0.3) == %lf\n", a);
+
+    char buf[20];
+
+    uint32_t ret = fseek(file, 0, SEEK_SET);
+
+    printf("[child process] fseek ret = %d \n", ret);
+
+    ret = fread(buf, 1, 20, file);
+
+    printf("[child process] fread ret = %d \n", ret);
+
+    printf("[child process] read from file : [%s] \n", buf);
+
+    fclose(file);
+  }
 
   return 0;
 }
