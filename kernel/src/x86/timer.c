@@ -19,7 +19,11 @@
 #define TIME_COUNT_DOWN 1000
 volatile uint32_t g_timer_count_down = 0;
 
+void proc_schedule();
+
 void timer_irq_handler(StackFrame* regs) {
+  proc_schedule();
+
   if (g_timer_count_down == 0) {
     g_timer_count_down = TIME_COUNT_DOWN;
 

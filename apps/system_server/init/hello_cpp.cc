@@ -33,7 +33,14 @@ void inner_func() {
 int main(int argc, const char** argv) {
   Base* b = new SubBase();
 
-  std::function<void()> f = [b]() { b->say(); };
+  std::function<void()> f = [b]() {
+    // consumes some time to make sure process context switch is happend
+    uint32_t loop = 30000000;
+    while (loop > 0) {
+      loop--;
+    }
+    b->say();
+  };
 
   f();
   f();

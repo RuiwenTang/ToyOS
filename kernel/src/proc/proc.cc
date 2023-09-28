@@ -14,6 +14,8 @@
 #define PROC_PAGE_MAP_SIZE (0x1000 * 5)
 #define PROC_STACK_SIZE (0x1000 * 2)
 
+#define PROC_MAX_TICKET 10
+
 extern "C" {
 
 // defined in proc.asm
@@ -82,6 +84,7 @@ Proc* init_proc(uint32_t init_size) {
   memset(p, 0, sizeof(Proc));
   g_proc_id++;
   p->pid = g_proc_id;
+  p->ticks = PROC_MAX_TICKET;
 
   // page mapping for this proc
   uint32_t proc_ptd = palloc_allocate(PROC_PAGE_MAP_SIZE);
@@ -425,6 +428,7 @@ Proc* proc_fork(Proc* proc) {
   new_proc->mapd_base = proc->mapd_base;
   new_proc->mapd_length = proc->mapd_length;
   new_proc->stack_top = proc->stack_top;
+  new_proc->ticks = proc->ticks;
 
   new_proc->page_table = palloc_allocate(PROC_PAGE_MAP_SIZE);
 
@@ -461,4 +465,23 @@ Proc* proc_fork(Proc* proc) {
   }
 
   return new_proc;
+}
+
+extern "C" void proc_schedule() {
+  // timer is filed but no proc is executed
+  if (!current_proc) {
+    return;
+  }
+
+  current_proc->ticks--;
+  if (current_proc->ticks <= 0) {
+    current_proc->ticks = PROC_MAX_TICKET;
+
+    util::List<Proc>::Remove<&Proc::ready_prev, &Proc::ready_next>(
+        current_proc, &ready_list.head, &ready_list.tail);
+
+    switch_to_ready(current_proc);
+
+    proc_switch();
+  }
 }

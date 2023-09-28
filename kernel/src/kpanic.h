@@ -14,11 +14,11 @@ void kernel_hang();
 }
 #endif
 
-#define KERNEL_PANIC(...)                                      \
-  do {                                                         \
+#define KERNEL_PANIC(...)                                           \
+  do {                                                              \
     kpanicf("kernel panic at %s, line: %d \n", __FILE__, __LINE__); \
-    kpanicf(__VA_ARGS__);                                      \
-    kernel_hang();                                             \
+    kpanicf(__VA_ARGS__);                                           \
+    kernel_hang();                                                  \
   } while (0)
 
 #endif  // TOY_KERNEL_INCLUDE_SYS_PANIC_H
