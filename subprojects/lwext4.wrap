@@ -1,0 +1,8 @@
+[wrap-git]
+directory = lwext4
+url = https://github.com/RuiwenTang/lwext4.git
+revision = toyos
+
+[provide]
+ext4 = ext2fs_dep
+

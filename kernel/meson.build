@@ -2,6 +2,7 @@
 # external dependency
 buildin_font_inc = subproject('font8x8').get_variable('font8x8_incdir')
 umm_malloc = subproject('umm_malloc').get_variable('umm_malloc_dep')
+ext4fs_dep = subproject('lwext4').get_variable('ext2fs_dep')
 
 kernel_src = [
   nasm_c.process([
@@ -107,7 +108,7 @@ kernel_sys = executable(
     link_args: kernel_link_args,
     c_args: kernel_c_flags,
     cpp_args: kernel_cpp_args,
-    dependencies: [toy_boot, umm_malloc, ext2fs_dep, elf_dep],
+    dependencies: [toy_boot, umm_malloc, ext4fs_dep, elf_dep],
 )
 
 gtest = subproject('gtest').get_variable('gtest_dep')

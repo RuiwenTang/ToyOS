@@ -15,7 +15,7 @@ ext4_file_tool = executable(
   ],
   dependencies: [
     cxxopts_dep,
-    ext2fs_dep,
+    ext4fs_dep,
   ],
 )
 
