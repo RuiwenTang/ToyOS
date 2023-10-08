@@ -38,6 +38,12 @@ void suspend_proc(Proc* proc);
 
 void switch_to_ready(Proc* proc);
 
+Proc* proc_get_parent(Proc* proc);
+
+void proc_add_child(Proc* proc, Proc* child);
+
+void proc_remove_child(Proc* proc, Proc* child);
+
 uint32_t proc_get_pid(Proc* proc);
 
 StackFrame* proc_get_stackframe(Proc* proc);

@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "KernelDebug",
             "type": "gdb",
             "request": "attach",
+            "name": "KernelDebug",
             "executable": "${workspaceFolder}/build/kernel/kernel.sys",
-            "target": "localhost:1234",
+            "target": "127.0.0.1:1234",
             "remote": true,
             "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb"
+            "valuesFormatting": "parseText"
         },
         {
             "name": "mk_floppy",

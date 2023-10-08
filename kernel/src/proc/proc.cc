@@ -57,13 +57,18 @@ typedef struct proc {
 
   util::List<MemoryRegion> memory;
   util::List<FileDescriptor> files;
+  util::List<Proc> children;
 
   char* pwd;
+
+  proc* parent;
 
   proc* ready_prev;
   proc* ready_next;
   proc* suspend_prev;
   proc* suspend_next;
+  proc* parent_prev;
+  proc* parent_next;
 } Proc;
 
 Proc* current_proc = NULL;
@@ -151,6 +156,27 @@ void switch_to_ready(Proc* proc) {
   current_proc = ready_list.head;
 }
 
+Proc* proc_get_parent(Proc* proc) { return proc->parent; }
+
+void proc_add_child(Proc* proc, Proc* child) {
+  child->parent = proc;
+
+  util::List<Proc>::Insert<&Proc::parent_prev, &Proc::parent_next>(
+      child, nullptr, proc->children.tail, &proc->children.head,
+      &proc->children.tail);
+}
+
+void proc_remove_child(Proc* proc, Proc* child) {
+  if (child->parent == nullptr || child->parent != proc) {
+    return;
+  }
+
+  util::List<Proc>::Remove<&Proc::parent_prev, &Proc::parent_next>(
+      child, &proc->children.head, &proc->children.tail);
+
+  child->parent = nullptr;
+}
+
 uint32_t proc_get_pid(Proc* proc) { return proc->pid; }
 
 StackFrame* proc_get_stackframe(Proc* proc) { return &proc->regs; }
@@ -169,12 +195,20 @@ void proc_grow_maped_length(Proc* proc, uint32_t size) {
 
 void proc_exit(Proc* proc) {
   util::List<Proc>::Remove<&Proc::suspend_prev, &Proc::suspend_next>(
-      current_proc, &suspend_list.head, &suspend_list.tail);
+      proc, &suspend_list.head, &suspend_list.tail);
 
   util::List<Proc>::Remove<&Proc::ready_prev, &Proc::ready_next>(
-      current_proc, &ready_list.head, &ready_list.tail);
+      proc, &ready_list.head, &ready_list.tail);
 
   current_proc = ready_list.head;
+
+  while (proc->children.head) {
+    auto child = proc->children.head;
+    proc_exit(child);
+
+    proc_remove_child(proc, child);
+    kfree(child);
+  }
 
   // close all files proc opened
   FileDescriptor* fd = proc->files.head;
@@ -206,11 +240,6 @@ void proc_exit(Proc* proc) {
 
     delete region;
   }
-
-  kfree(proc);
-
-  // switch to other process
-  proc_switch();
 }
 
 /**

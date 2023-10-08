@@ -4,6 +4,7 @@
 
 #include "fs/vfs.hpp"
 #include "kprintf.h"
+#include "mmu/heap.h"
 #include "mmu/page.hpp"
 #include "proc/proc.h"
 #include "screen/screen.h"
@@ -22,7 +23,10 @@ static void print_sys_call(StackFrame* frame) {
 
 extern "C" void kernel_sys_call(StackFrame* frame) {
   if (frame->eax == SYS_CALL_EXIT) {
-    proc_exit((Proc*)frame);
+    auto proc = (Proc*)frame;
+    proc_exit(proc);
+    kfree(proc);
+    proc_switch();
   } else if (frame->eax == SYS_CALL_WRITE) {
     // File id is stored in ebx
     if (frame->ebx == 1) {
