@@ -575,12 +575,7 @@ void proc_wait(Proc* proc) {
   }
 
   // children is running suspend self and wait for children
-  util::List<Proc>::Remove<&Proc::ready_prev, &Proc::ready_next>(
-      proc, &ready_list.head, &ready_list.tail);
-
-  util::List<Proc>::Insert<&Proc::suspend_prev, &Proc::suspend_next>(
-      proc, nullptr, suspend_list.tail, &suspend_list.head, &suspend_list.tail);
-
+  suspend_proc(proc);
   current_proc = ready_list.head;
 
   proc_switch();
