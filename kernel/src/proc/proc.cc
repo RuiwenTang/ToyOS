@@ -44,16 +44,29 @@ fs::Node* file_desc_get_file(struct FileDescriptor* fd) { return fd->node; }
 
 uint16_t file_desc_get_id(struct FileDescriptor* fd) { return fd->id; }
 
+enum class ProcState {
+  NONE,
+  READY,
+  SUSPEND,
+  EXIT,
+};
+
 typedef struct proc {
   StackFrame regs;
   int32_t ticks;
   uint32_t pid;
+
+  ProcState state;
 
   uint32_t mapd_base;
   uint32_t mapd_length;
   uint32_t page_table;
 
   uint32_t stack_top;
+
+  bool wait_returned = false;
+  uint32_t wait_pid = 0;
+  uint32_t wait_state = 0;
 
   util::List<MemoryRegion> memory;
   util::List<FileDescriptor> files;
@@ -145,15 +158,25 @@ void proc_add_memory(Proc* proc, uint32_t base, uint32_t length) {
 }
 
 void suspend_proc(Proc* proc) {
+  util::List<Proc>::Remove<&Proc::ready_prev, &Proc::ready_next>(
+      proc, &ready_list.head, &ready_list.tail);
+
   util::List<Proc>::Insert<&Proc::suspend_prev, &Proc::suspend_next>(
       proc, suspend_list.tail, nullptr, &suspend_list.head, &suspend_list.tail);
+
+  proc->state = ProcState::SUSPEND;
 }
 
 void switch_to_ready(Proc* proc) {
   util::List<Proc>::Insert<&Proc::ready_prev, &Proc::ready_next>(
-      proc, ready_list.tail, nullptr, &ready_list.head, &ready_list.tail);
+      proc, nullptr, ready_list.head, &ready_list.head, &ready_list.tail);
+
+  util::List<Proc>::Remove<&Proc::suspend_prev, &Proc::suspend_next>(
+      proc, &suspend_list.head, &suspend_list.tail);
 
   current_proc = ready_list.head;
+
+  proc->state = ProcState::READY;
 }
 
 Proc* proc_get_parent(Proc* proc) { return proc->parent; }
@@ -513,4 +536,52 @@ extern "C" void proc_schedule() {
 
     proc_switch();
   }
+}
+
+void proc_notify_parent(Proc* proc) {
+  if (proc->parent == nullptr) {
+    return;
+  }
+
+  proc->parent->wait_returned = true;
+  proc->parent->wait_pid = proc->pid;
+  proc->parent->wait_state = proc->regs.ebx;
+
+  if (proc->parent->state == ProcState::SUSPEND) {
+    switch_to_ready(proc->parent);
+  }
+}
+
+void proc_wait(Proc* proc) {
+  // child proc returned before parent call wait
+  if (proc->wait_returned) {
+    proc->regs.eax = proc->wait_pid;
+
+    int* ptr = reinterpret_cast<int*>(proc->regs.ebx);
+
+    if (ptr) {
+      *ptr = proc->wait_state;
+    }
+
+    proc->wait_returned = false;
+
+    return;
+  }
+
+  if (proc->children.head == nullptr) {
+    // no actived children and not returned value stored
+    proc->regs.eax = -1;
+    return;
+  }
+
+  // children is running suspend self and wait for children
+  util::List<Proc>::Remove<&Proc::ready_prev, &Proc::ready_next>(
+      proc, &ready_list.head, &ready_list.tail);
+
+  util::List<Proc>::Insert<&Proc::suspend_prev, &Proc::suspend_next>(
+      proc, nullptr, suspend_list.tail, &suspend_list.head, &suspend_list.tail);
+
+  current_proc = ready_list.head;
+
+  proc_switch();
 }

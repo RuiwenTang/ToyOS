@@ -24,6 +24,7 @@ static void print_sys_call(StackFrame* frame) {
 extern "C" void kernel_sys_call(StackFrame* frame) {
   if (frame->eax == SYS_CALL_EXIT) {
     auto proc = (Proc*)frame;
+    proc_notify_parent(proc);
     proc_exit(proc);
     kfree(proc);
     proc_switch();
@@ -50,6 +51,8 @@ extern "C" void kernel_sys_call(StackFrame* frame) {
     frame->eax = proc_get_pid(reinterpret_cast<Proc*>(frame));
   } else if (frame->eax == SYS_CALL_FORK) {
     sys::sys_call_fork(frame);
+  } else if (frame->eax == SYS_CALL_WAIT) {
+    proc_wait((Proc*)frame);
   }
 }
 

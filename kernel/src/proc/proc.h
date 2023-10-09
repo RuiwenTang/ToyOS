@@ -79,4 +79,8 @@ void proc_exit(Proc* proc);
 
 Proc* proc_fork(Proc* proc);
 
+void proc_notify_parent(Proc* proc);
+
+void proc_wait(Proc* proc);
+
 #endif  // TOY_PROC_PROC_H

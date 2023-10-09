@@ -16,6 +16,8 @@ void sys_call_fork(StackFrame* frame) {
   proc_get_stackframe(sub_proc)->eax = 0;
 
   proc_add_child(proc, sub_proc);
+
+  proc_switch();
 }
 
 }  // namespace sys

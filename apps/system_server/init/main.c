@@ -82,6 +82,15 @@ int main(int argc, const char** argv) {
     printf("[child process] read from file : [%s] \n", buf);
 
     fclose(file);
+
+    return 123;
+  } else {
+    printf("[parent process] \n");
+    int child_ret = 0;
+    pid_t pid = wait(&child_ret);
+
+    printf("[parent process] wait child pid = %d | ret = %d \n", (uint32_t)pid,
+           child_ret);
   }
 
   return 0;

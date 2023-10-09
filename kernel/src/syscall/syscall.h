@@ -19,6 +19,7 @@ extern "C" {
 #define SYS_CALL_SEEK 7
 #define SYS_CALL_GETPID 8
 #define SYS_CALL_FORK 9
+#define SYS_CALL_WAIT 10
 
 void sys_call_init();
 
