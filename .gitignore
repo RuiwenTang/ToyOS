@@ -1,0 +1,12 @@
+# CMake build trees
+Build/
+
+# pixi environment
+.pixi/
+
+# generated artifacts
+toolchain/
+sysroot/
+image/
+*.img
+*.DS_Store

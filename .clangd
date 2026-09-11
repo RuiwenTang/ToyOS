@@ -1,0 +1,4 @@
+CompileFlags:
+  CompilationDatabase: Build/aarch64
+  Remove: [--driver-mode=*, -resource-dir=*]
+  Add: [-D__toyos__]

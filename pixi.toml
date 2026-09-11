@@ -1,0 +1,34 @@
+[project]
+name = "toyos"
+version = "0.1.0"
+description = "ToyOS aarch64 - hobby microkernel"
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+# Host environment only. Everything that runs on / links into the OS itself
+# is cross-built by scripts/recipes against the aarch64-unknown-toyos triple
+# (conda-forge has no packages for that target and never will).
+[dependencies]
+cmake = ">=3.28"
+ninja = "*"
+clangxx = ">=22.1,<22.2"    # toolchain; keep in lockstep with the sysroot LLVM source
+lld = ">=22.1,<22.2"
+llvm-tools = ">=22.1,<22.2" # llvm-strip / llvm-objcopy / llvm-nm
+meson = "*"                 # third-party recipes still drive meson cross files
+python = ">=3.12"
+mtools = "*"                # FAT image assembly
+e2fsprogs = "*"             # mkfs.ext4
+dtc = "*"                   # device tree (R5C)
+
+# External, not on conda-forge (see docs/aarch64-port-arch.md "Host tools"):
+#   qemu-system-aarch64 -> brew install qemu
+#   rkdeveloptool       -> R5C flashing, brew or source
+
+[pypi-dependencies]
+fonttools = "*"             # pyftsubset for the font stack
+
+[tasks]
+configure = "cmake --preset aarch64"
+build = { cmd = "cmake --build Build/aarch64", depends-on = ["configure"] }
+configure-host = "cmake --preset host"
+test-host = { cmd = "ctest --test-dir Build/host --output-on-failure", depends-on = ["configure-host"] }
