@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "toyos"
 version = "0.1.0"
 description = "ToyOS aarch64 - hobby microkernel"
@@ -14,14 +14,16 @@ ninja = "*"
 clangxx = ">=22.1,<22.2"    # toolchain; keep in lockstep with the sysroot LLVM source
 lld = ">=22.1,<22.2"
 llvm-tools = ">=22.1,<22.2" # llvm-strip / llvm-objcopy / llvm-nm
+clang-format = ">=22.1,<22.2"
 meson = "*"                 # third-party recipes still drive meson cross files
+make = "*"                  # GNU make (u-boot needs it; macOS ships BSD make)
 python = ">=3.12"
-mtools = "*"                # FAT image assembly
-e2fsprogs = "*"             # mkfs.ext4
 dtc = "*"                   # device tree (R5C)
 
 # External, not on conda-forge (see docs/aarch64-port-arch.md "Host tools"):
 #   qemu-system-aarch64 -> brew install qemu
+#   mtools              -> FAT image assembly, brew install mtools
+#   mkfs.ext4           -> brew install e2fsprogs (keg-only: opt/e2fsprogs/sbin)
 #   rkdeveloptool       -> R5C flashing, brew or source
 
 [pypi-dependencies]
@@ -32,3 +34,20 @@ configure = "cmake --preset aarch64"
 build = { cmd = "cmake --build Build/aarch64", depends-on = ["configure"] }
 configure-host = "cmake --preset host"
 test-host = { cmd = "ctest --test-dir Build/host --output-on-failure", depends-on = ["configure-host"] }
+
+# In-place, tracked files only (git ls-files) — untracked editor droppings
+# never sneak into a formatting commit.
+format = "git ls-files '*.c' '*.h' | xargs clang-format -i"
+
+# Boot image assembly (FAT + Image + qemu.dtb + extlinux.conf).
+mkimage = { cmd = "scripts/boot/mkimage.sh", depends-on = ["build"] }
+
+# Fast loop: QEMU's -kernel mini-loader, HVF near-native speed.
+# Exit with Ctrl-A x.
+boot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf -m 1G -nographic -kernel Build/aarch64/kernel/Image", depends-on = ["build"] }
+
+# Fidelity check: full U-Boot distro-boot from a virtio disk. TCG, not
+# HVF — u-boot.bin from flash shows no serial output under HVF. Requires
+# Build/u-boot/qemu/u-boot.bin (scripts/boot/build-uboot.sh, one-off).
+# Exit with Ctrl-A x (or wait out the 2s autoboot).
+boot-uboot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel tcg -m 1G -nographic -bios Build/u-boot/qemu/u-boot.bin -drive if=none,file=Build/boot/sd.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0", depends-on = ["mkimage"] }

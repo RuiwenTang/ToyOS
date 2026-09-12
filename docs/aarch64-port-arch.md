@@ -145,8 +145,9 @@ tree, the host tree never sees the cross toolchain and vice versa):
   script) and userspace (`--sysroot`) share the tree: same clang, same
   triple; flags live on named interface libraries.
 - `pixi.toml` pins the host environment (cmake/ninja/clang/lld/llvm-tools/
-  meson/dtc/mtools/e2fsprogs + fonttools). `pixi.lock` makes the
-  environment reproducible. External: qemu (brew), rkdeveloptool (brew).
+  meson/dtc + fonttools). `pixi.lock` makes the
+  environment reproducible. External: qemu (brew), rkdeveloptool (brew),
+  mtools (brew — not on conda-forge), e2fsprogs (brew, keg-only).
   LLVM version convention: host clang == sysroot LLVM source version.
 - Image assembly, third-party recipes (meson cross files), and QEMU/smoke
   runners are scripts carried over from ToyOS64; CMake only orchestrates
