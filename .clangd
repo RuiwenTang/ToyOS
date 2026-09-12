@@ -1,4 +1,5 @@
+# The cross tree is the one that matters — kernel code compiles with the
+# aarch64 toolchain, not the host's. (Build/host has no targets until the
+# GTest tree lands in R1.)
 CompileFlags:
   CompilationDatabase: Build/aarch64
-  Remove: [--driver-mode=*, -resource-dir=*]
-  Add: [-D__toyos__]
