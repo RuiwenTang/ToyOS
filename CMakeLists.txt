@@ -7,6 +7,11 @@ cmake_minimum_required(VERSION 3.28)
 #   Build/aarch64 - the OS itself (preset "aarch64" + cmake/aarch64-toolchain.cmake)
 project(toyos VERSION 0.1.0 LANGUAGES C CXX ASM)
 
+# Must precede add_subdirectory: the export flag only covers targets
+# created after it, so a trailing set() silently skips the whole kernel
+# subtree and clangd gets nothing.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(TOYOS_HOST)
     message(STATUS "ToyOS host tree (unit tests & host tools)")
     # GTest via FetchContent lands with the first copied kernel module (R1);
@@ -14,7 +19,7 @@ if(TOYOS_HOST)
     # else in this tree, so there is no ABI mixing.
 else()
     message(STATUS "ToyOS aarch64 target tree")
-    # add_subdirectory(kernel)   # R0: arch layer skeleton
+    add_subdirectory(kernel)   # R0: arch layer skeleton
     # add_subdirectory(lib)      # R2: libsys + friends copied from ToyOS64
     # add_subdirectory(servers)  # R2: PM/VM/VFS
     # add_subdirectory(user)     # R2: init, sh, tests
