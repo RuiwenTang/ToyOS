@@ -24,7 +24,7 @@ qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf -m 1G \
 
 # fidelity check: full U-Boot distro-boot from a virtio disk
 scripts/boot/build-uboot.sh          # → Build/u-boot/qemu/u-boot.bin
-scripts/boot/mkimage.sh              # → Build/boot/sd.img
+scripts/boot/mksdcard.sh             # → Build/boot/sd.img
 # (TCG, not HVF: u-boot.bin from flash shows no serial output under HVF)
 qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel tcg -m 1G \
     -nographic -bios Build/u-boot/qemu/u-boot.bin \

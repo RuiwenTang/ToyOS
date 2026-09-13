@@ -39,8 +39,8 @@ test-host = { cmd = "ctest --test-dir Build/host --output-on-failure", depends-o
 # never sneak into a formatting commit.
 format = "git ls-files '*.c' '*.h' | xargs clang-format -i"
 
-# Boot image assembly (FAT + Image + qemu.dtb + extlinux.conf).
-mkimage = { cmd = "scripts/boot/mkimage.sh", depends-on = ["build"] }
+# Sd-card boot image assembly (FAT + Image + qemu.dtb + extlinux.conf).
+sdcard = { cmd = "scripts/boot/mksdcard.sh", depends-on = ["build"] }
 
 # Fast loop: QEMU's -kernel mini-loader, HVF near-native speed.
 # Exit with Ctrl-A x.
@@ -50,4 +50,4 @@ boot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf -m
 # HVF — u-boot.bin from flash shows no serial output under HVF. Requires
 # Build/u-boot/qemu/u-boot.bin (scripts/boot/build-uboot.sh, one-off).
 # Exit with Ctrl-A x (or wait out the 2s autoboot).
-boot-uboot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel tcg -m 1G -nographic -bios Build/u-boot/qemu/u-boot.bin -drive if=none,file=Build/boot/sd.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0", depends-on = ["mkimage"] }
+boot-uboot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel tcg -m 1G -nographic -bios Build/u-boot/qemu/u-boot.bin -drive if=none,file=Build/boot/sd.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0", depends-on = ["sdcard"] }

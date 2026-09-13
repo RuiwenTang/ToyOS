@@ -1,5 +1,5 @@
 #!/bin/sh
-# mkimage.sh — assemble the boot sd image for the U-Boot path.
+# mksdcard.sh — assemble the boot sd image for the U-Boot path.
 #
 # FAT16 image laid out the way U-Boot's distro-boot scans it:
 #   /boot/extlinux/extlinux.conf   boot menu (kernel + dtb + console)
