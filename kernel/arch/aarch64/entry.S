@@ -40,12 +40,13 @@ _start:
     ldr x0, =__stack_top
     mov sp, x0
 
-    /* Park vector table: with VBAR_EL1 at its reset value (0x0) any
-     * exception lands on the boot stub and the kernel re-runs — which
-     * looks on the serial console like overlapping garbage output. Point
-     * VBAR_EL1 at 16 slots that spin in place; nothing escapes to 0x0.
-     * (The real per-class vector stubs arrive with R1.) */
-    adr x0, vectors_park
+    /* VBAR_EL1 → the real 16-slot table in traps.S. Must be armed before
+     * anything can trap (bss clearing, C code). The literal-pool form
+     * works at any link distance — adr's ±4 KiB range would silently
+     * depend on .vectors staying right after .text.boot in the linker
+     * script (it does today, but not as a contract anyone should rely
+     * on). Its 2 KiB alignment is the linker script's job. */
+    ldr x0, =vectors
     msr vbar_el1, x0
 
     /* Zero .bss — RAM contents are whatever the loader left behind. */
@@ -65,12 +66,3 @@ _start:
     b 5b
 
 .size _start, . - _start
-
-/* VBAR_EL1 table: 16 slots × 128 bytes (SP_EL0/SP_ELx, 4 classes ×
- * current/LOWER_AARCH64), every slot an infinite spin. */
-.section .vectors, "ax"
-vectors_park:
-.rept 16
-    b .                      /* park: exceptions must not escape */
-    .space 124
-.endr

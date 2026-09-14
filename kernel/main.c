@@ -51,6 +51,10 @@ void kmain(const void* dtb) {
   }
 
   fdt_dump(dtb);
+  serial_puts("\nR1: exception vector smoke test\n");
+  __asm__ __volatile__("svc #0x42");
+  serial_puts("R1: returned from SVC, context restore OK\n");
+
   serial_puts("\nR0 complete, parking\n");
   cpu_halt();
 }
