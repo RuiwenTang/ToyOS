@@ -16,8 +16,24 @@
   only — design changes go to the blueprint backlog first.
   Licensing: this repo is BSD-3, ToyOS64 is GPL-2.0; the sole author re-licenses the
   ported code, so no GPL attribution is required in port commits.
-- R0 complete (dual-path acceptance: QEMU `-kernel Image` direct boot under
-  HVF, and `-bios u-boot.bin` extlinux boot under TCG).
+- R0 complete (tagged `aarch64-r0`): dual-path acceptance — QEMU `-kernel Image`
+  direct boot under HVF, and `-bios u-boot.bin` extlinux boot under TCG.
+- R1 in progress: exception vectors + GICv3 + EL1 virtual timer + IRQ dispatch
+  done (`pixi run smoke`, headless serial capture, ~5 s; HVF and TCG/U-Boot
+  paths both pass). Remaining R1: scheduler port (switch.S/percpu + copy
+  kernel/intr+sched from ToyOS64), PSCI CPU_ON secondary bring-up, SGI IPI
+  echo; then tag `aarch64-r1`.
+- GICv3 essentials learned: ICC_PMR_EL1 resets to 0 and masks everything —
+  set 0xff before ICC_IGRPEN1; GICR access needs WAKER wake first; find this
+  core's redistributor by matching GICR_TYPER[63:32] against MPIDR (not frame
+  index); EOI only for INTID < 1020; virt timer = PPI 11 → INTID 27; SGIs+PPIs
+  must be Group 1 (GICR_IGROUPR0) or they arrive as FIQ, not IRQ.
+- CNTFRQ_EL0 differs per boot path (24 MHz under HVF `-kernel`, 1 GHz under
+  TCG/U-Boot) — always read it at runtime, never hardcode.
+- clang -O2 merges adjacent 32-bit loads into one 64-bit access: value-correct
+  but an alignment fault on 4-aligned data while the MMU is off (all memory is
+  Device). DTB cell reads must use volatile byte loads (fdt_cell64).
+- serial_print_hex already prints the "0x" prefix — don't add a literal one.
 - QEMU invocation: `qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf`
   (gic-version=3 must be explicit, matching the real target NanoPi R5C / RK3568).
   The U-Boot/flash path runs under TCG.
