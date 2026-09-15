@@ -10,3 +10,4 @@ sysroot/
 image/
 *.img
 *.DS_Store
+.zcode/
