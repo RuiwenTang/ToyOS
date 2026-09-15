@@ -21,6 +21,8 @@ add_executable(Kernel
     arch/aarch64/entry.S
     arch/aarch64/traps.S
     arch/aarch64/traps.c
+    arch/aarch64/gicv3.c
+    arch/aarch64/arch_timer.c
     arch/aarch64/serial_pl011.c)
 set_target_properties(Kernel PROPERTIES OUTPUT_NAME Kernel SUFFIX ".elf")
 target_link_libraries(Kernel PRIVATE toyos_kernel_flags)

@@ -202,6 +202,90 @@ int fdt_get_prop_u32(const void* blob, fdt_node_t node, const char* name,
   return 0;
 }
 
+uint32_t fdt_cell32(const void* cells) { return be32(cells); }
+
+/* Two big-endian u32 cells → one u64. Volatile byte loads on purpose:
+ * clang -O2 merges adjacent plain loads into a single 8-byte access,
+ * which is value-correct but faults on 4-aligned data while the MMU is
+ * off (everything is Device memory). Volatile keeps the accesses narrow. */
+uint64_t fdt_cell64(const void* cells) {
+  const volatile uint8_t* b = cells;
+  uint32_t hi = ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) |
+                ((uint32_t)b[2] << 8) | (uint32_t)b[3];
+  uint32_t lo = ((uint32_t)b[4] << 24) | ((uint32_t)b[5] << 16) |
+                ((uint32_t)b[6] << 8) | (uint32_t)b[7];
+  return ((uint64_t)hi << 32) | lo;
+}
+
+/* --- find by compatible --- */
+
+static int prop_streq(const char* a, const char* b) {
+  size_t i = 0;
+
+  while (a[i] && a[i] == b[i]) i++;
+  return a[i] == '\0' && b[i] == '\0';
+}
+
+/* compatible is a stringlist (NUL-separated); any element may match. */
+static int stringlist_has(const char* data, uint32_t len, const char* s) {
+  uint32_t i = 0;
+
+  while (i < len) {
+    if (prop_streq(data + i, s)) return 1;
+    while (i < len && data[i] != '\0') i++;
+    i++; /* past the NUL */
+  }
+  return 0;
+}
+
+fdt_node_t fdt_find_compatible(const void* blob, const char* compat) {
+  const uint32_t *p, *base;
+
+  if (fdt_valid(blob) == 0) return FDT_NODE_INVALID;
+
+  base = (const uint32_t*)((const uint8_t*)blob +
+                           hdr(blob, offsetof(struct fdt_header, off_struct)));
+  p = base;
+
+  for (;;) {
+    uint32_t tok = be32(p);
+
+    if (tok == FDT_BEGIN_NODE) {
+      int node_off = (int)((const uint8_t*)p - (const uint8_t*)base);
+      p++;
+      p = skip_name(p);
+
+      /* This node's properties end at its first child or its END_NODE;
+       * the outer loop handles whichever it is. */
+      for (;;) {
+        uint32_t t = be32(p);
+
+        if (t == FDT_PROP) {
+          uint32_t len;
+          const char* name;
+
+          p = prop_data(p, &len, blob, &name);
+          const char* data = (const char*)p;
+          p = (const uint32_t*)((const uint8_t*)p + ((len + 3) & ~3));
+
+          if (prop_streq(name, "compatible") &&
+              stringlist_has(data, len, compat))
+            return node_off;
+        } else if (t == FDT_NOP) {
+          p++;
+        } else {
+          break;
+        }
+      }
+    } else if (tok == FDT_END_NODE || tok == FDT_NOP) {
+      p++;
+    } else {
+      break; /* FDT_END */
+    }
+  }
+  return FDT_NODE_INVALID;
+}
+
 /* --- dump (R0 acceptance: DTB walk on serial) --- */
 
 static void print_indent(int depth) {

@@ -27,6 +27,16 @@ uint32_t fdt_valid(const void* blob);
  * if absent. */
 fdt_node_t fdt_find_node(const void* blob, const char* path);
 
+/* Find a node anywhere in the tree whose `compatible` stringlist contains
+ * compat. Hardware discovery goes through this, not paths — node names
+ * embed unit addresses that vary per board ("intc@8000000" here,
+ * "interrupt-controller@fd400000" on the RK3568). */
+fdt_node_t fdt_find_compatible(const void* blob, const char* compat);
+
+/* Read one big-endian cell (u32) or cell pair (u64) from property data. */
+uint32_t fdt_cell32(const void* cells);
+uint64_t fdt_cell64(const void* cells);
+
 /* Look up a property in a node. Returns its length and sets *out to the
  * property value (big-endian cells for integers, raw bytes for strings);
  * returns -1 if absent. */

@@ -1,17 +1,17 @@
 /*
  * traps.c — exception dispatcher (aarch64)
  *
- * R1 scope: decode ESR, report, and park. No forwardable source exists yet
- * (GIC arrives next), so every IRQ/FIQ is unexpected by definition and
- * every sync trap is a kernel bug or a deliberate smoke test. The
- * dispatch-table structure below is the seam where the real handlers
- * (timer, GIC, SVC) will register — same shape as an x86 isr table fed
- * from the vector number.
+ * R1 scope: decode ESR, report, and park. EL1 IRQs now flow to the GIC
+ * dispatcher (gicv3_irq_enter — ack, handler table, EOI); every sync
+ * trap is still a kernel bug or a deliberate smoke test. The GIC's
+ * handler table is where the copied kernel/intr/irq.c takes over when
+ * the scheduler port lands.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <toyos/arch/aarch64/cpu.h>
+#include <toyos/arch/aarch64/gicv3.h>
 #include <toyos/arch/aarch64/trap.h>
 #include <toyos/kernel/serial.h>
 #include <toyos/kernel/types.h>
@@ -96,6 +96,11 @@ void trap_dispatch(struct trap_frame* f) {
   uint64_t esr = read_esr();
   uint64_t ec = esr >> 26;
 
+  if (f->class == TRAP_IRQ_CUR_SPX) {
+    gicv3_irq_enter();
+    return;
+  }
+
   if (f->class == TRAP_SYNC_CUR_SPX && ec == EC_SVC64) {
     /* R1 smoke test: SVC at EL1 is the only intentional trap. Real SVC
      * entry for ring 3 (R2) takes the LOW_A64 path instead. */
@@ -108,5 +113,5 @@ void trap_dispatch(struct trap_frame* f) {
   }
 
   trap_dump(f, "unexpected");
-  cpu_halt(); /* no way out until timers/GIC exist */
+  cpu_halt(); /* kernel bug by definition — the park loop never returns */
 }

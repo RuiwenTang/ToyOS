@@ -46,6 +46,11 @@ sdcard = { cmd = "scripts/boot/mksdcard.sh", depends-on = ["build"] }
 # Exit with Ctrl-A x.
 boot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf -m 1G -nographic -kernel Build/aarch64/kernel/Image", depends-on = ["build"] }
 
+# Headless serial smoke regression (blueprint test layer 3): boot the
+# kernel, wait for the expected lines, kill QEMU. A few seconds end to
+# end, so it fits the ~1-minute agent-run rule.
+smoke = { cmd = "python scripts/test/smoke.py", depends-on = ["build"] }
+
 # Fidelity check: full U-Boot distro-boot from a virtio disk. TCG, not
 # HVF — u-boot.bin from flash shows no serial output under HVF. Requires
 # Build/u-boot/qemu/u-boot.bin (scripts/boot/build-uboot.sh, one-off).

@@ -1,0 +1,68 @@
+/*
+ * arch_timer.c — EL1 virtual generic timer (aarch64)
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include <toyos/arch/aarch64/arch_timer.h>
+#include <toyos/arch/aarch64/gicv3.h>
+#include <toyos/arch/aarch64/sysreg.h>
+#include <toyos/kernel/serial.h>
+#include <toyos/kernel/types.h>
+
+#define CNTV_CTL_ENABLE (1u << 0)
+#define CNTV_CTL_IMASK (1u << 1)
+
+static uint64_t timer_freq;
+static uint64_t tick_period;
+static volatile uint64_t tick_count;
+
+static void timer_irq(uint32_t intid) {
+  (void)intid;
+
+  /* Re-arm before anything else. PPI 27 is level-asserted while the
+   * comparison holds, so leaving it pending past the EOI re-fires
+   * immediately. Deadline += period (not now + period) so long-run
+   * frequency is exact. */
+  sysreg_write(CNTV_CVAL_EL0, sysreg_read(CNTV_CVAL_EL0) + tick_period);
+  barrier_dsb_sy();
+
+  tick_count++;
+
+  /* Smoke visibility only — this print disappears when schedule() owns
+   * the tick (next R1 slice). */
+  if (tick_count % 10 == 0) {
+    serial_puts("timer: tick ");
+    serial_print_dec(tick_count);
+    serial_puts(" (irq context)\n");
+  }
+}
+
+uint32_t arch_timer_init(void) {
+  timer_freq = sysreg_read(CNTFRQ_EL0);
+  serial_puts("timer: CNTFRQ ");
+  serial_print_dec(timer_freq);
+  serial_puts(" Hz, virtual timer INTID 27\n");
+
+  gicv3_register_handler(ARCH_TIMER_VIRT_INTID, timer_irq);
+  return (uint32_t)timer_freq;
+}
+
+void arch_timer_start(uint32_t hz) {
+  tick_period = timer_freq / hz;
+  tick_count = 0;
+
+  sysreg_write(CNTV_CVAL_EL0, sysreg_read(CNTVCT_EL0) + tick_period);
+  barrier_dsb_sy(); /* deadline lands before the timer is unmasked */
+  sysreg_write(CNTV_CTL_EL0, CNTV_CTL_ENABLE);
+  barrier_isb();
+}
+
+void arch_timer_stop(void) {
+  sysreg_write(CNTV_CTL_EL0, CNTV_CTL_IMASK);
+  barrier_isb();
+}
+
+uint64_t arch_timer_ticks(void) { return tick_count; }
+
+uint64_t arch_timer_counter(void) { return sysreg_read(CNTVCT_EL0); }
