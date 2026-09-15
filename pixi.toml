@@ -32,8 +32,13 @@ fonttools = "*"             # pyftsubset for the font stack
 [tasks]
 configure = "cmake --preset aarch64"
 build = { cmd = "cmake --build Build/aarch64", depends-on = ["configure"] }
-configure-host = "cmake --preset host"
-test-host = { cmd = "ctest --test-dir Build/host --output-on-failure", depends-on = ["configure-host"] }
+# Host-tree notes: the pixi (conda-forge) clang needs an explicit macOS SDK
+# sysroot, and the Xcode 27 SDK is too new for it (libSystem.tbd carries arch
+# entries LLVM 22's tapi rejects) — pin the CommandLineTools 26 SDK. Build
+# before ctest: gtest_discover_tests enumerates at build time.
+configure-host = "cmake --preset host -DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk"
+build-host = { cmd = "cmake --build Build/host", depends-on = ["configure-host"] }
+test-host = { cmd = "ctest --test-dir Build/host --output-on-failure", depends-on = ["build-host"] }
 
 # In-place, tracked files only (git ls-files) — untracked editor droppings
 # never sneak into a formatting commit.

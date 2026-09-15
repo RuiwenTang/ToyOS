@@ -14,9 +14,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(TOYOS_HOST)
     message(STATUS "ToyOS host tree (unit tests & host tools)")
-    # GTest via FetchContent lands with the first copied kernel module (R1);
-    # host tests always compile with the same pixi-provided clang as everything
-    # else in this tree, so there is no ABI mixing.
+    # GTest via FetchContent, landed with the first copied kernel module (R1:
+    # atomic.h + heap.c); host tests always compile with the same pixi-provided
+    # clang as everything else in this tree, so there is no ABI mixing.
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.tar.gz)
+    FetchContent_MakeAvailable(googletest)
+    enable_testing()
+    add_subdirectory(tests)
 else()
     message(STATUS "ToyOS aarch64 target tree")
     add_subdirectory(kernel)   # R0: arch layer skeleton

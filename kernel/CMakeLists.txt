@@ -11,6 +11,7 @@ target_compile_options(toyos_kernel_flags INTERFACE
     -fno-builtin
     -fno-asynchronous-unwind-tables
     -mgeneral-regs-only      # no FP/SIMD until fpu.c enables CPACR (R1)
+    -D__TOYOS_KERNEL__       # heap.c dual (kernel/host) paths select the kernel one
     -Wall -Wextra
     -O2 -g)
 target_include_directories(toyos_kernel_flags INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -18,12 +19,18 @@ target_include_directories(toyos_kernel_flags INTERFACE ${CMAKE_CURRENT_SOURCE_D
 add_executable(Kernel
     main.c
     fdt.c
+    string.c
     arch/aarch64/entry.S
     arch/aarch64/traps.S
     arch/aarch64/traps.c
     arch/aarch64/gicv3.c
     arch/aarch64/arch_timer.c
-    arch/aarch64/serial_pl011.c)
+    arch/aarch64/serial_pl011.c
+    sched/percpu.c
+    sched/spinlock.c
+    mm/heap.c
+    mm/heap_provider_static.c
+    mm/kstack.c)
 set_target_properties(Kernel PROPERTIES OUTPUT_NAME Kernel SUFFIX ".elf")
 target_link_libraries(Kernel PRIVATE toyos_kernel_flags)
 target_link_options(Kernel PRIVATE
