@@ -24,15 +24,25 @@ QEMU_CMD = [
 ]
 
 # Lines that must appear on serial before the deadline. Order is not
-# enforced; tick lines interleave with the boot dump. The park line last
-# keeps the captured log complete through the measured-rate summary.
+# enforced; worker lines interleave arbitrarily — that interleaving IS the
+# tick-preemption proof (the workers never yield). Every worker/iter pair
+# is listed so a lost switch fails loudly.
 EXPECTED = [
     b"R1: returned from SVC, context restore OK",
     b"gic: distributor + redistributor + cpu interface online",
     b"timer: CNTFRQ",
-    b"timer: tick 30 (irq context)",
-    b"R1: gicv3+timer smoke PASS",
-    b"R1 slice complete (scheduler + PSCI next), parking",
+    b"[Timer] tick #1",
+    b"[Sched] Boot thread TCB created (tid=0)",
+    b"sched: worker 0 iter 1 (tick-preempted)",
+    b"sched: worker 0 iter 2 (tick-preempted)",
+    b"sched: worker 0 iter 3 (tick-preempted)",
+    b"sched: worker 1 iter 1 (tick-preempted)",
+    b"sched: worker 1 iter 2 (tick-preempted)",
+    b"sched: worker 1 iter 3 (tick-preempted)",
+    b"sched: worker 2 iter 1 (tick-preempted)",
+    b"sched: worker 2 iter 2 (tick-preempted)",
+    b"sched: worker 2 iter 3 (tick-preempted)",
+    b"R1: scheduler smoke PASS",
 ]
 
 TIMEOUT_SECS = 30

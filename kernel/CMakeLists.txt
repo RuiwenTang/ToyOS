@@ -26,8 +26,14 @@ add_executable(Kernel
     arch/aarch64/gicv3.c
     arch/aarch64/arch_timer.c
     arch/aarch64/serial_pl011.c
+    arch/aarch64/bootmmu.c
+    arch/aarch64/switch.S
     sched/percpu.c
     sched/spinlock.c
+    sched/sched.c
+    sched/thread.c
+    sched/sleep.c
+    intr/timer.c
     mm/heap.c
     mm/heap_provider_static.c
     mm/kstack.c)

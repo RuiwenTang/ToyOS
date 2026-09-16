@@ -8,10 +8,17 @@
  * per-thread by the time ring 3 exists (R2); today it is the boot stack.
  *
  * Slots cannot hold a full save sequence (30 registers), so each one
- * carries only its slot number in x30 and jumps to the shared entry, which
- * pushes a trap_frame and calls the C dispatcher. x30 is call-clobbered
- * scratch here, exactly like using rcx to pass the vector number in an
- * x86 hand-rolled stub.
+ * carries its slot number in x30 and jumps to the shared entry, which
+ * pushes a trap_frame and calls the C dispatcher. The number rides in x30
+ * like using rcx to pass the vector number in an x86 hand-rolled stub —
+ * but x30 is live state here, so the slot stashes the ORIGINAL LR on the
+ * stack before loading the number: unlike x86 (whose CPU pushes RIP
+ * itself), nothing saves it for us, and destroying it corrupts any
+ * interrupted function that returns via `ret x30` — found the hard way
+ * when a timer preempt landing inside timer_get_ticks resumed and ret'd
+ * to slot number 5. The shared entry patches the stashed LR into the
+ * frame's x30 slot once the frame is built; the epilogue drops the extra
+ * staging pair.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -49,6 +56,12 @@ trap_entry_asm:
     stp x2, x3, [sp, #-16]!        /* elr, spsr */
     stp x1, xzr, [sp, #-16]!       /* sp_el0, (pad) */
 
+    /* Patch the frame's LR: the interrupted context's real x30 is in the
+     * staging pair the vector slot pushed (frame +0x130); the x29/x30 pair
+     * above currently holds the slot number. x9 is scratch — already saved. */
+    ldr x9, [sp, #0x130]
+    str x9, [sp, #0x118]           /* frame.x[29] == x30 slot */
+
     mov x0, sp                     /* frame — trap_dispatch reads f->class */
     bl trap_dispatch
 
@@ -73,8 +86,8 @@ trap_entry_asm:
     ldp x23, x24, [sp], #16
     ldp x25, x26, [sp], #16
     ldp x27, x28, [sp], #16
-    ldp x29, x30, [sp], #16        /* x30 = original LR again */
-    add sp, sp, #16                /* drop stashed class */
+    ldp x29, x30, [sp], #16        /* x30 = original LR (patched above) */
+    add sp, sp, #32                /* drop stashed class + LR staging pair */
 
     eret
 .size trap_entry_asm, . - trap_entry_asm
@@ -89,58 +102,74 @@ trap_entry_asm:
 .type vectors, @function
 vectors:
     /* current EL, SP_EL0 (never entered today: kernel runs SP_EL1) */
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SYNC_CUR_SP0
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_IRQ_CUR_SP0
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_FIQ_CUR_SP0
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SERROR_CUR_SP0
     b trap_entry_asm
-    .space 120
+    .space 116
 
     /* current EL, SP_ELx — where all R1 exceptions arrive */
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SYNC_CUR_SPX
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_IRQ_CUR_SPX
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_FIQ_CUR_SPX
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SERROR_CUR_SPX
     b trap_entry_asm
-    .space 120
+    .space 116
 
     /* lower EL, AArch64 — ring 3 entries, live from R2 */
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SYNC_LOW_A64
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_IRQ_LOW_A64
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_FIQ_LOW_A64
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SERROR_LOW_A64
     b trap_entry_asm
-    .space 120
+    .space 116
 
     /* lower EL, AArch32 — 32-bit userland is out of scope forever */
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SYNC_LOW_A32
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_IRQ_LOW_A32
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_FIQ_LOW_A32
     b trap_entry_asm
-    .space 120
+    .space 116
+    str x30, [sp, #-16]!
     mov x30, #TRAP_SERROR_LOW_A32
     b trap_entry_asm
-    .space 120
+    .space 116
 .size vectors, . - vectors

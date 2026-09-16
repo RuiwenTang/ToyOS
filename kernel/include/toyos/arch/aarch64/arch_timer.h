@@ -22,18 +22,20 @@
 #define ARCH_TIMER_VIRT_PPI 11
 #define ARCH_TIMER_VIRT_INTID (16 + ARCH_TIMER_VIRT_PPI)
 
-/* Read CNTFRQ_EL0, announce it, bind the tick handler. Returns the
- * counter frequency in Hz. Does not start the timer. */
+/* Read CNTFRQ_EL0 and announce it. Returns the counter frequency in Hz.
+ * Does not start the timer or touch the GIC — kernel/intr/timer.c owns the
+ * tick handler registration. */
 uint32_t arch_timer_init(void);
 
-/* Arm the timer at hz ticks per second and zero the tick counter. */
+/* Arm the timer at hz ticks per second (fresh deadline from now). */
 void arch_timer_start(uint32_t hz);
+
+/* Advance the deadline by one period (deadline += period, so long-run
+ * frequency is exact). First call of every tick — before EOI/schedule. */
+void arch_timer_reload(void);
 
 /* Mask the timer interrupt (IMASK=1; a later start resumes cleanly). */
 void arch_timer_stop(void);
-
-/* Ticks taken since arch_timer_start; bumped from IRQ context. */
-uint64_t arch_timer_ticks(void);
 
 /* Raw virtual counter (CNTVCT_EL0) — monotonic; frequency from init. */
 uint64_t arch_timer_counter(void);

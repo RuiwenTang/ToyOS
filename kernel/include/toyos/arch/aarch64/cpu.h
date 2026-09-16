@@ -36,12 +36,15 @@ static inline uint64_t read_mpidr(void) { return sysreg_read(MPIDR_EL1); }
  * resumes after the handler returns through eret. */
 static inline void cpu_wait_for_interrupt(void) { __asm__ __volatile__("wfi"); }
 
-/* Park the core: interrupts off, wait forever. */
+/* Park the core: interrupts off, wait forever. (noreturn so callers like
+ * thread_exit's tail satisfy -Winvalid-noreturn without a dummy loop.) */
+static inline void cpu_halt(void) __attribute__((noreturn));
 static inline void cpu_halt(void) {
   __asm__ __volatile__(
       "msr daifset, #0xf\n"
       "1: wfi\n"
       "b 1b\n");
+  __builtin_unreachable();
 }
 
 #endif /* TOYOS_ARCH_AARCH64_CPU_H */

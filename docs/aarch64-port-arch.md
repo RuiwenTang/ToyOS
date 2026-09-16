@@ -175,6 +175,17 @@ tree, the host tree never sees the cross toolchain and vice versa):
 R0–R4 develop against QEMU with HVF; real-hardware bring-up interleaves as
 R5 (storage must be debugged on the board due to DMA coherence).
 
+R1 staging notes (scheduler slice): the MMU goes on at boot via a static
+identity map (`kernel/arch/aarch64/bootmmu.c`) — RAM Normal WB, MMIO
+Device — because Device memory does not support atomics/exclusives and the
+scheduler is built on them; this is scaffolding for caches+atomics only and
+R2's paging replaces it wholesale (no TTBR1 split, user spaces, ASIDs or
+CoW here). heap.c is the verbatim upstream copy over a static-arena
+provider (pmm provider lands with R2 mm); kstack.c is an R1 shim without
+real guard pages (MMU-off limitation, same replacement point); alarm/signal
+hooks in the timer tick and the fpu switch are R1 stubs until the
+process/signal (R2/R3) and fpu.c (R2) ports.
+
 ## Migration manifest (from ToyOS64, copy — do not rewrite)
 
 | Copy | Notes |

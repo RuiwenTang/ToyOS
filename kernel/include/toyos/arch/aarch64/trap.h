@@ -39,7 +39,11 @@
 
 #include <toyos/kernel/types.h>
 
-/* As pushed by trap_entry_asm, from low address to high. */
+/* As pushed by trap_entry_asm, from low address to high. Above the struct
+ * (+304) sits one more 16-byte staging pair the vector slot pushed: the
+ * interrupted context's ORIGINAL x30, stashed before the slot loaded its
+ * number into x30 — the shared entry patches it into x[29] (the x30 slot).
+ * C never sees the staging pair; the epilogue drops it. */
 struct trap_frame {
   uint64_t sp_el0; /* +0 */
   uint64_t pad0;   /* +8 */

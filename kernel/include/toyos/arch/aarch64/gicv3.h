@@ -35,10 +35,17 @@ void gicv3_register_handler(uint32_t intid, gicv3_handler_t handler);
 void gicv3_enable_intid(uint32_t intid);
 void gicv3_disable_intid(uint32_t intid);
 
-/* IRQ entry from the vector dispatcher: ack (ICC_IAR1_EL1), run the
- * bound handler, EOI (ICC_EOIR1_EL1). Spurious acks (INTID 1023) return
+/* IRQ entry from the vector dispatcher: ack (ICC_IAR1_EL1) and run the
+ * bound handler. A registered handler OWNS its EOI — it may context-switch
+ * (the timer tick) and never return through this frame, so it must call
+ * gicv3_eoi() itself first (re-arm → EOI → schedule is the timer's order).
+ * Unhandled INTIDs are EOI'd here. Spurious acks (INTID 1023) return
  * without an EOI, per the architecture. */
 void gicv3_irq_enter(void);
+
+/* End of interrupt (priority drop + deactivate, ICC_EOIR1_EL1). Safe no-op
+ * for the special INTIDs (>= 1020). */
+void gicv3_eoi(uint32_t intid);
 
 /* gicv3_send_sgi() arrives with the PSCI/IPI slice. */
 

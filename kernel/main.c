@@ -4,21 +4,70 @@
  * entry.S has already settled the core to EL1, cleared .bss and set up the
  * boot stack; kmain receives the DTB pointer from the boot contract (x0).
  *
- * R1 scope: console, FDT walk, exception smoke (SVC), GICv3 + generic
- * timer bring-up, IRQ tick smoke. Scheduler + PSCI follow in the next R1
- * slice, per the roadmap in docs/aarch64-port-arch.md.
+ * Boot order mirrors ToyOS64's kernel_main for everything the R1 slice
+ * ports: percpu → heap → kstack → sched_init (+ smoke workers) → timer →
+ * sched_start, all with IRQs masked until sched_start unmasks them. From
+ * sched_start on, kmain's context IS the boot/idle thread.
+ *
+ * R1 remaining scope after this slice: PSCI CPU_ON secondaries + SGI IPI
+ * echo (docs/aarch64-port-arch.md).
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <toyos/arch/aarch64/arch_timer.h>
+#include <toyos/arch/aarch64/bootmmu.h>
 #include <toyos/arch/aarch64/cpu.h>
 #include <toyos/arch/aarch64/gicv3.h>
+#include <toyos/kernel/atomic.h>
 #include <toyos/kernel/fdt.h>
+#include <toyos/kernel/heap.h>
+#include <toyos/kernel/kstack.h>
+#include <toyos/kernel/percpu.h>
+#include <toyos/kernel/sched.h>
 #include <toyos/kernel/serial.h>
+#include <toyos/kernel/timer.h>
 #include <toyos/kernel/types.h>
 
-#define SMOKE_TICKS 30
+#define SMOKE_THREADS 3
+#define SMOKE_ITERS 3
+
+/* --- Tick-preempt smoke (R1 acceptance: "preempt ticks") ---
+ *
+ * Each worker busy-waits through >= 2 ticks per iteration and never yields
+ * — on this single online core the ONLY way all SMOKE_THREADS workers can
+ * finish is the timer tick preempting between them, which is exactly what
+ * the smoke asserts (interleaved "worker N iter I" lines on serial). The
+ * last one out prints the PASS line and everyone thread_exit()s, which
+ * also exercises the reap path (switch_prev → thread_release). */
+static volatile uint32_t smoke_done;
+
+static void smoke_worker(void* arg) {
+  uintptr_t id = (uintptr_t)arg;
+
+  for (int i = 1; i <= SMOKE_ITERS; i++) {
+    uint64_t start = timer_get_ticks();
+    while (timer_get_ticks() - start <
+           2); /* spin: no yield — the tick must move us off */
+
+    serial_puts("sched: worker ");
+    serial_print_dec((uint64_t)id);
+    serial_puts(" iter ");
+    serial_print_dec((uint64_t)i);
+    serial_puts(" (tick-preempted)\n");
+  }
+
+  uint32_t done = atomic_add_return(&smoke_done, 1);
+  if (done == SMOKE_THREADS) {
+    serial_puts("R1: scheduler smoke PASS — ");
+    serial_print_dec(timer_get_ticks());
+    serial_puts(" ticks, ");
+    serial_print_dec(SMOKE_THREADS);
+    serial_puts(" workers round-robin\n");
+  }
+
+  thread_exit();
+}
 
 void kmain(const void* dtb) {
   uint32_t size;
@@ -30,6 +79,11 @@ void kmain(const void* dtb) {
   serial_puts(", dtb @ ");
   serial_print_hex((uintptr_t)dtb);
   serial_puts("\n");
+
+  /* Before the first atomic/exclusive instruction (the scheduler's
+   * spinlocks): Device memory doesn't support them. Identity map only —
+   * RAM becomes Normal WB, MMIO stays Device; R2's paging replaces this. */
+  bootmmu_init();
 
   size = fdt_valid(dtb);
   if (size == 0) {
@@ -65,28 +119,22 @@ void kmain(const void* dtb) {
     serial_puts("gic: init failed, halting\n");
     cpu_halt();
   }
-  uint64_t freq = arch_timer_init();
-  arch_timer_start(10);
-  gicv3_enable_intid(ARCH_TIMER_VIRT_INTID);
+  arch_timer_init();
 
-  serial_puts("R1: unmasking IRQs, waiting for ");
-  serial_print_dec(SMOKE_TICKS);
-  serial_puts(" ticks @ 10 Hz\n");
+  serial_puts("\nR1: scheduler bring-up\n");
+  percpu_init();
+  kernel_heap_init();
+  kstack_init();
+  sleep_init();
+  sched_init();
 
-  uint64_t t0 = arch_timer_counter();
-  irq_enable();
-  while (arch_timer_ticks() < SMOKE_TICKS) cpu_wait_for_interrupt();
-  uint64_t t1 = arch_timer_counter();
+  for (uintptr_t i = 0; i < SMOKE_THREADS; i++)
+    thread_create("smoke", smoke_worker, (void*)i);
 
-  arch_timer_stop();
-  irq_disable();
+  timer_init(); /* registers + arms the tick; IRQs stay masked */
 
-  serial_puts("\nR1: gicv3+timer smoke PASS — ");
-  serial_print_dec(arch_timer_ticks());
-  serial_puts(" ticks, measured ~");
-  serial_print_dec(freq * arch_timer_ticks() / (t1 - t0));
-  serial_puts(" Hz\n");
-
-  serial_puts("\nR1 slice complete (scheduler + PSCI next), parking\n");
-  cpu_halt();
+  /* Unmasks IRQs, swaps onto the boot kstack, first schedule() — never
+   * returns. The workers above run to completion (tick preempted), then
+   * this context (the boot/idle thread) parks in WFI. */
+  sched_start();
 }

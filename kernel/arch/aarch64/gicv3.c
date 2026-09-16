@@ -238,15 +238,20 @@ void gicv3_irq_enter(void) {
 
   gicv3_handler_t handler = handlers[intid];
   if (handler) {
+    /* The handler owns its EOI: a handler may context-switch (the timer
+     * tick calls schedule()), and a switch never returns through this
+     * frame — a deferred EOI here would never run. Handlers that do not
+     * switch simply call gicv3_eoi() themselves before returning (the
+     * ToyOS64 irq.c "kernel handler owns its EOI" rule). */
     handler(intid);
   } else {
     serial_puts("\n!! irq: unhandled INTID ");
     serial_print_dec(intid);
-    serial_puts("\n");
+    serial_puts(" — EOI'd by dispatcher\n");
+    gicv3_eoi(intid);
   }
+}
 
-  /* EOI after the handler while nothing here can switch context. When
-   * schedule() lands it must be EOI-first — a switch may never return
-   * through this frame (the ToyOS64 timer_tick discipline). */
-  sysreg_write(ICC_EOIR1_EL1, intid);
+void gicv3_eoi(uint32_t intid) {
+  if (intid < 1020) sysreg_write(ICC_EOIR1_EL1, intid);
 }

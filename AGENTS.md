@@ -19,20 +19,37 @@
 - R0 complete (tagged `aarch64-r0`): dual-path acceptance — QEMU `-kernel Image`
   direct boot under HVF, and `-bios u-boot.bin` extlinux boot under TCG.
 - R1 in progress: exception vectors + GICv3 + EL1 virtual timer + IRQ dispatch
-  done (`pixi run smoke`, headless serial capture, ~5 s; HVF and TCG/U-Boot
-  paths both pass). Remaining R1: scheduler port (switch.S/percpu + copy
-  kernel/intr+sched from ToyOS64), PSCI CPU_ON secondary bring-up, SGI IPI
-  echo; then tag `aarch64-r1`.
+  done; scheduler port done (sched.c/thread.c/sleep.c/percpu/spinlock from
+  ToyOS64 + switch.S + bootmmu.c; `pixi run smoke` green under HVF and TCG —
+  3 no-yield workers interleaving on tick preemption is the acceptance proof;
+  host GTest tree live: `pixi run test-host`, 37 tests over atomic.h + heap.c).
+  Remaining R1: PSCI CPU_ON secondary bring-up, SGI IPI echo; then tag
+  `aarch64-r1`.
+- MMU must go on before the first atomic: with the MMU off all memory is
+  Device type and atomics/exclusives are unsupported there (LDAXR faults
+  DFSC 0x35 under HVF, LDADD 0x61 under TCG — first hit was heap_lock).
+  `bootmmu.c` builds a static identity map (RAM Normal WB / MMIO Device)
+  purely to enable caches + atomics; it is R1 scaffolding, NOT the R2 paging
+  design (no TTBR1 split / user spaces / ASIDs / CoW). Descriptor encodings
+  follow Linux: block/section = 0b01, table/page = 0b11 in bits[1:0] —
+  writing 0b10 for block is reserved and faults that level's walk.
+- Vector-slot LR trap: a slot's `mov x30, #slot` destroys the interrupted
+  context's LR before anything saves it (x86's CPU pushes RIP for you; ARM
+  gives nothing). Any preempted leaf function that returns via `ret x30`
+  resumes and jumps to the slot number. Slots now stash the original LR
+  below the frame first; trap_entry_asm patches it into the frame's x30 slot.
 - GICv3 essentials learned: ICC_PMR_EL1 resets to 0 and masks everything —
   set 0xff before ICC_IGRPEN1; GICR access needs WAKER wake first; find this
   core's redistributor by matching GICR_TYPER[63:32] against MPIDR (not frame
   index); EOI only for INTID < 1020; virt timer = PPI 11 → INTID 27; SGIs+PPIs
-  must be Group 1 (GICR_IGROUPR0) or they arrive as FIQ, not IRQ.
+  must be Group 1 (GICR_IGROUPR0) or they arrive as FIQ, not IRQ. Registered
+  handlers own their EOI (a handler may schedule() away and never return
+  through gicv3_irq_enter); the dispatcher EOIs only unhandled INTIDs.
 - CNTFRQ_EL0 differs per boot path (24 MHz under HVF `-kernel`, 1 GHz under
   TCG/U-Boot) — always read it at runtime, never hardcode.
-- clang -O2 merges adjacent 32-bit loads into one 64-bit access: value-correct
-  but an alignment fault on 4-aligned data while the MMU is off (all memory is
-  Device). DTB cell reads must use volatile byte loads (fdt_cell64).
+- clang -O2 merges adjacent 32-bit loads into one 64-bit access: on Device
+  memory that alignment-faults (the historical fdt_cell64 lesson; RAM is
+  Normal since bootmmu, so this now only bites MMIO paths).
 - serial_print_hex already prints the "0x" prefix — don't add a literal one.
 - QEMU invocation: `qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf`
   (gic-version=3 must be explicit, matching the real target NanoPi R5C / RK3568).
