@@ -18,4 +18,10 @@
  * the first spinlock will do). Identity map: no address changes. */
 void bootmmu_init(void);
 
+/* AP counterpart (first C call of secondary_entry): enable THIS core's
+ * MMU + caches off the same shared tables. SCTLR/TCR/TTBR are per-core,
+ * so each released core must run its own enable before its first atomic
+ * (MMU-off memory is all-Device; exclusives fault there). */
+void bootmmu_ap_enable(void);
+
 #endif /* TOYOS_ARCH_AARCH64_BOOTMMU_H */

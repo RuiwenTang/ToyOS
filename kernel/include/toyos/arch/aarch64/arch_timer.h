@@ -40,4 +40,8 @@ void arch_timer_stop(void);
 /* Raw virtual counter (CNTVCT_EL0) — monotonic; frequency from init. */
 uint64_t arch_timer_counter(void);
 
+/* CNTFRQ_EL0 in Hz (read once at init; identical on every core — the
+ * counter is system-wide, only the timers are per-core). */
+uint64_t arch_timer_freq(void);
+
 #endif /* TOYOS_ARCH_AARCH64_ARCH_TIMER_H */

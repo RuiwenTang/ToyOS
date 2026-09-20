@@ -53,3 +53,5 @@ void arch_timer_stop(void) {
 }
 
 uint64_t arch_timer_counter(void) { return sysreg_read(CNTVCT_EL0); }
+
+uint64_t arch_timer_freq(void) { return timer_freq; }

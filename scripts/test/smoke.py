@@ -6,18 +6,25 @@ the same machine flags as `pixi run boot`, captures the serial output and
 passes once every expected line has appeared. Kills QEMU on success;
 dumps the log and fails on timeout or early exit. Finishes in a few
 seconds so it stays inside the project's ~1-minute agent smoke rule.
+
+TOYOS_SMOKE_ACCEL=tcg swaps the accelerator (the TCG/U-Boot-path analogue
+of the same regression; slower, still seconds).
 """
 
+import os
 import select
 import subprocess
 import sys
 import time
 
+ACCEL = os.environ.get("TOYOS_SMOKE_ACCEL", "hvf")
+
 QEMU_CMD = [
     "qemu-system-aarch64",
     "-M", "virt,gic-version=3",
     "-cpu", "max",
-    "-accel", "hvf",
+    "-accel", ACCEL,
+    "-smp", "4",   # R1 acceptance: PSCI bring-up + per-core preemption
     "-m", "1G",
     "-nographic",
     "-kernel", "Build/aarch64/kernel/Image",
@@ -43,9 +50,40 @@ EXPECTED = [
     b"sched: worker 2 iter 2 (tick-preempted)",
     b"sched: worker 2 iter 3 (tick-preempted)",
     b"R1: scheduler smoke PASS",
+    # --- R1 SMP acceptance: all cores online + IPI echo ---
+    b"psci: conduit",  # version digits differ per boot path — prefix only
+    b"smp: 4 cpu(s)",
+    b"[SMP] core 1 online",
+    b"[SMP] core 2 online",
+    b"[SMP] core 3 online",
+    b"SMP: all 4 cores online",
+    b"ipi: round 1",
+    b"ipi: round 2",
+    b"ipi: round 3",
+    b"SMP: IPI echo PASS",
+    # Per-core preempt proof: 2 workers x 3 iters on each of cores 1-3.
+    b"smp: cpu 1 w0 iter 1 (tick-preempted)",
+    b"smp: cpu 1 w0 iter 2 (tick-preempted)",
+    b"smp: cpu 1 w0 iter 3 (tick-preempted)",
+    b"smp: cpu 1 w1 iter 1 (tick-preempted)",
+    b"smp: cpu 1 w1 iter 2 (tick-preempted)",
+    b"smp: cpu 1 w1 iter 3 (tick-preempted)",
+    b"smp: cpu 2 w0 iter 1 (tick-preempted)",
+    b"smp: cpu 2 w0 iter 2 (tick-preempted)",
+    b"smp: cpu 2 w0 iter 3 (tick-preempted)",
+    b"smp: cpu 2 w1 iter 1 (tick-preempted)",
+    b"smp: cpu 2 w1 iter 2 (tick-preempted)",
+    b"smp: cpu 2 w1 iter 3 (tick-preempted)",
+    b"smp: cpu 3 w0 iter 1 (tick-preempted)",
+    b"smp: cpu 3 w0 iter 2 (tick-preempted)",
+    b"smp: cpu 3 w0 iter 3 (tick-preempted)",
+    b"smp: cpu 3 w1 iter 1 (tick-preempted)",
+    b"smp: cpu 3 w1 iter 2 (tick-preempted)",
+    b"smp: cpu 3 w1 iter 3 (tick-preempted)",
+    b"SMP: per-core preempt smoke PASS",
 ]
 
-TIMEOUT_SECS = 30
+TIMEOUT_SECS = 60
 
 
 def main() -> int:

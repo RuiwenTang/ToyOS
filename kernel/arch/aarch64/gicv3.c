@@ -21,6 +21,7 @@
 #include <toyos/arch/aarch64/mmio.h>
 #include <toyos/arch/aarch64/sysreg.h>
 #include <toyos/kernel/fdt.h>
+#include <toyos/kernel/percpu.h>
 #include <toyos/kernel/serial.h>
 #include <toyos/kernel/types.h>
 
@@ -54,7 +55,15 @@ static struct {
 } rdist_regions[GICV3_MAX_RDIST_REGIONS];
 static uint32_t rdist_region_count;
 static uint64_t rdist_stride;
-static uintptr_t this_cpu_rdist;
+
+/* Per-CPU: this core's redistributor frame, found by affinity match — the
+ * LAPIC base of the GIC world. Indexed by cpu_local slot; valid only after
+ * that core ran gicv3_init_ap. */
+static uintptr_t rdist_base[MAX_CPUS];
+
+static inline uintptr_t this_rdist(void) {
+  return rdist_base[this_cpu()->index];
+}
 
 static gicv3_handler_t handlers[GICV3_INTID_MAX];
 
@@ -136,7 +145,7 @@ static int gicr_find_and_wake(void) {
       uint32_t typer_hi = mmio_read32(rd + GICR_TYPER + 4);
       if (typer_hi != want) continue;
 
-      this_cpu_rdist = rd;
+      rdist_base[this_cpu()->index] = rd;
       uint32_t waker = mmio_read32(rd + GICR_WAKER);
       if (waker & GICR_WAKER_SLEEP) {
         mmio_write32(rd + GICR_WAKER, waker & ~GICR_WAKER_SLEEP);
@@ -173,15 +182,9 @@ int gicv3_init(const void* dtb) {
     return -1;
   }
 
-  if (gicr_find_and_wake() != 0) return -1;
-  serial_puts("gic: redistributor (this core) @ ");
-  serial_print_hex(this_cpu_rdist);
-  serial_puts("\n");
-
-  /* All SGIs+PPIs → Group 1 non-secure: they arrive as IRQ. Group 0 is
-   * the FIQ domain and nothing in the design uses it. Priorities keep
-   * their reset value 0 (highest); the PMR below lets them through. */
-  mmio_write32(this_cpu_rdist + GICR_IGROUPR0, 0xffffffff);
+  /* This core's redistributor + CPU interface (per-CPU registers — the
+   * same routine every AP runs from secondary_main). */
+  if (gicv3_init_ap() != 0) return -1;
 
   /* Distributor on: affinity routing first, Group 1 forwarding with it. */
   mmio_write32(gicd_base + GICD_CTLR,
@@ -191,6 +194,27 @@ int gicv3_init(const void* dtb) {
     return -1;
   }
   barrier_dsb_sy();
+
+  serial_puts("gic: distributor + redistributor + cpu interface online\n");
+  return 0;
+}
+
+/* Per-core bring-up: wake THIS core's redistributor, route SGIs+PPIs to
+ * Group 1, enable the CPU interface. Run by the BSP inside gicv3_init and
+ * by every AP inside secondary_main — the GICR frame, IGROUPR0, PMR and
+ * IGRPEN1 are all per-core state, and a core with a sleeping GICR or a
+ * zero PMR receives nothing. */
+int gicv3_init_ap(void) {
+  if (gicr_find_and_wake() != 0) return -1;
+  uintptr_t rd = this_rdist();
+
+  serial_printf("[gic] core %u redistributor @ %x\n",
+                (uint64_t)this_cpu()->index, (uint64_t)rd);
+
+  /* All SGIs+PPIs → Group 1 non-secure: they arrive as IRQ. Group 0 is
+   * the FIQ domain and nothing in the design uses it. Priorities keep
+   * their reset value 0 (highest); the PMR below lets them through. */
+  mmio_write32(rd + GICR_IGROUPR0, 0xffffffff);
 
   /* CPU interface. SRE must latch or none of the ICC_* accesses are
    * real; PMR must be raised from its reset 0 before anything can be
@@ -205,7 +229,17 @@ int gicv3_init(const void* dtb) {
   sysreg_write(ICC_IGRPEN1_EL1, 1);
   barrier_isb();
 
-  serial_puts("gic: distributor + redistributor + cpu interface online\n");
+  /* Enable the SGIs we use — LAST. Real hardware resets SGIs enabled
+   * (GICR_ISENABLER0 = 0x0000FFFF), but QEMU's GICv3 model resets them
+   * to 0 (hw/intc/arm_gicv3_common.c: cs->gicr_ienabler0 = 0), so this
+   * write is required under QEMU or SGIs are never delivered. Placement
+   * matters under QEMU 11.0.1 HVF: before the CPU-interface block, with
+   * value 0xffff, this same write tripped the backend's assert(isv) on
+   * the MMIO-exit path; after the block, with just the ids in use
+   * (resched 0 + echo 1), both accelerators run clean. PPIs stay off
+   * until individually enabled (the timer's INTID 27). */
+  mmio_write32(rd + GICR_ISENABLER0, (1u << GICV3_SGI_RESCHED) | (1u << 1));
+
   return 0;
 }
 
@@ -215,7 +249,7 @@ void gicv3_register_handler(uint32_t intid, gicv3_handler_t handler) {
 
 void gicv3_enable_intid(uint32_t intid) {
   if (intid < 32) {
-    mmio_write32(this_cpu_rdist + GICR_ISENABLER0, 1u << intid);
+    mmio_write32(this_rdist() + GICR_ISENABLER0, 1u << intid);
   } else if (intid < GICV3_INTID_MAX) {
     mmio_write32(gicd_base + GICD_ISENABLER(intid >> 5), 1u << (intid & 31));
   }
@@ -224,15 +258,35 @@ void gicv3_enable_intid(uint32_t intid) {
 
 void gicv3_disable_intid(uint32_t intid) {
   if (intid < 32) {
-    mmio_write32(this_cpu_rdist + GICR_ICENABLER0, 1u << intid);
+    mmio_write32(this_rdist() + GICR_ICENABLER0, 1u << intid);
   } else if (intid < GICV3_INTID_MAX) {
     mmio_write32(gicd_base + GICD_ICENABLER(intid >> 5), 1u << (intid & 31));
   }
   barrier_dsb_sy();
 }
 
+void gicv3_send_sgi(uint32_t sgi, uint32_t aff0_targets, bool all_except_self) {
+  /* ICC_SGI1R_EL1 is the IPI primitive (the LAPIC ICR analogue, minus the
+   * per-target command formatting — one register write). Layout:
+   * TargetList [15:0] (bit per Aff0 cpu), INTID [27:24], Aff2 [39:32],
+   * IRM [40] (route to all cores except self, ignoring TargetList),
+   * Aff3 [55:48]. Both targets are single-cluster (Aff1..3 = 0); a
+   * multi-cluster board fills in the Aff fields here. */
+  uint64_t val = ((uint64_t)(sgi & 0xf) << 24);
+  if (all_except_self) {
+    val |= (1ull << 40);
+  } else {
+    val |= (aff0_targets & 0xffff);
+  }
+  sysreg_write(ICC_SGI1R_EL1, val);
+}
+
 void gicv3_irq_enter(void) {
-  uint32_t intid = (uint32_t)sysreg_read(ICC_IAR1_EL1) & 0xffffff;
+  /* Mask to the INTID field [9:0]: for SGIs the ack also carries the
+   * sender's CPU id in the upper bits (GICv2's IAR had it in [12:10];
+   * here it sits above the INTID) — indexing the handler table with it
+   * would dispatch garbage. 1020-1023 fit the same field. */
+  uint32_t intid = (uint32_t)sysreg_read(ICC_IAR1_EL1) & 0x3ff;
 
   if (intid >= 1020) return; /* 1023 spurious (1020-1022 LPI-only): no EOI */
 
@@ -245,9 +299,8 @@ void gicv3_irq_enter(void) {
      * ToyOS64 irq.c "kernel handler owns its EOI" rule). */
     handler(intid);
   } else {
-    serial_puts("\n!! irq: unhandled INTID ");
-    serial_print_dec(intid);
-    serial_puts(" — EOI'd by dispatcher\n");
+    serial_printf("\n!! irq: unhandled INTID %u — EOI'd by dispatcher\n",
+                  (uint64_t)intid);
     gicv3_eoi(intid);
   }
 }

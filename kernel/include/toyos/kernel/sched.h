@@ -22,8 +22,9 @@
 
 typedef uint32_t tid_t;
 
-#define THREAD_STACK_SIZE 16384 /* 4 pages; allocated via kstack with a guard \
-                                 */
+#define THREAD_STACK_SIZE                             \
+  16384 /* 4 pages; allocated via kstack with a guard \
+         */
 #define THREAD_NAME_MAX 16
 #define THREAD_MAGIC \
   0x54485244u /* "THRD": stamped at alloc, cleared before kfree (UAF guard) */

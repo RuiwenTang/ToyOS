@@ -58,18 +58,12 @@ static uint64_t table_desc(uint64_t* table) {
   return (uint64_t)(uintptr_t)table | DESC_TABLE;
 }
 
-void bootmmu_init(void) {
-  /* [0, 1 GB) MMIO → Device; [1 GB, 2 GB) = 0x40000000.. → RAM → Normal.
-   * L2 blocks are 2 MiB: one L2 table per 1 GiB L1 slot. */
-  for (int i = 0; i < 512; i++) {
-    boot_l2_mmio[i] = BLOCK_DESC((uint64_t)i << 21, ATTR_DEVICE);
-    boot_l2_ram[i] =
-        BLOCK_DESC(0x40000000ull + ((uint64_t)i << 21), ATTR_NORMAL);
-  }
-  boot_l1[0] = table_desc(boot_l2_mmio);
-  boot_l1[1] = table_desc(boot_l2_ram);
-  boot_l0[0] = table_desc(boot_l1);
-
+/* Program MAIR/TCR/TTBR0 from the (already built) static tables and turn
+ * the MMU + caches on. Shared by the BSP (after building the tables) and
+ * every AP (tables are shared read-only after boot) — SCTLR/TCR/TTBR are
+ * per-core registers, so each core must run this itself. Identity map
+ * throughout: enabling the MMU changes memory types, never addresses. */
+static void bootmmu_enable(void) {
   /* MAIR: attr 0 = Device-nGnRE, attr 1 = Normal WB RW-cacheable. */
   const uint64_t mair = ((uint64_t)0x04 << 0) | ((uint64_t)0xff << 8);
   sysreg_write(MAIR_EL1, mair);
@@ -96,6 +90,29 @@ void bootmmu_init(void) {
            | (1u << 12); /* I: instruction cache */
   sysreg_write(SCTLR_EL1, sctlr);
   barrier_isb();
+}
 
+void bootmmu_init(void) {
+  /* [0, 1 GB) MMIO → Device; [1 GB, 2 GB) = 0x40000000.. → RAM → Normal.
+   * L2 blocks are 2 MiB: one L2 table per 1 GiB L1 slot. */
+  for (int i = 0; i < 512; i++) {
+    boot_l2_mmio[i] = BLOCK_DESC((uint64_t)i << 21, ATTR_DEVICE);
+    boot_l2_ram[i] =
+        BLOCK_DESC(0x40000000ull + ((uint64_t)i << 21), ATTR_NORMAL);
+  }
+  boot_l1[0] = table_desc(boot_l2_mmio);
+  boot_l1[1] = table_desc(boot_l2_ram);
+  boot_l0[0] = table_desc(boot_l1);
+
+  bootmmu_enable();
+
+  /* From here on RAM is Normal and atomics are legal — arm the serial
+   * SMP lock (unlocked plain MMIO until now, safe only single-core). */
+  serial_smp_arm();
   serial_puts("mmu: boot identity map on — RAM Normal WB, MMIO Device\n");
+}
+
+void bootmmu_ap_enable(void) {
+  bootmmu_enable(); /* same tables, this core's own sysregs */
+  serial_puts("mmu: ap identity map on\n");
 }

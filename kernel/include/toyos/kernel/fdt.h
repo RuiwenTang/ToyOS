@@ -51,4 +51,13 @@ int fdt_get_prop_u32(const void* blob, fdt_node_t node, const char* name,
  * serial). */
 void fdt_dump(const void* blob);
 
+/* --- Child iteration (SMP: walking /cpus) ---
+ * Node handles double as iteration cursors: child_first returns the first
+ * direct child of @parent, child_next the sibling after @node. Both return
+ * FDT_NODE_INVALID at the end. Properties of @parent are skipped (DT
+ * ordering: props before children), and child_next skips @node's whole
+ * subtree — only direct children are visited. */
+fdt_node_t fdt_child_first(const void* blob, fdt_node_t parent);
+fdt_node_t fdt_child_next(const void* blob, fdt_node_t node);
+
 #endif /* TOYOS_KERNEL_FDT_H */

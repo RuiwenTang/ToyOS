@@ -13,6 +13,7 @@
 
 #include <toyos/arch/aarch64/cpu.h>
 #include <toyos/arch/aarch64/fpu.h>
+#include <toyos/arch/aarch64/gicv3.h>
 #include <toyos/arch/aarch64/sched_arch.h>
 #include <toyos/kernel/atomic.h>
 #include <toyos/kernel/heap.h>
@@ -161,15 +162,9 @@ void sched_init(void) {
 }
 
 static void thread_log_created(const struct thread* t, uint32_t cpu) {
-  serial_puts("[Sched] created thread '");
-  serial_puts(t->name);
-  serial_puts("' tid=");
-  serial_print_dec(t->tid);
-  serial_puts(" cpu=");
-  serial_print_dec(cpu);
-  serial_puts(" stack=");
-  serial_print_hex((uint64_t)(uintptr_t)t->stack_base);
-  serial_puts("\n");
+  serial_printf("[Sched] created thread '%s' tid=%u cpu=%u stack=%x\n", t->name,
+                (uint64_t)t->tid, (uint64_t)cpu,
+                (uint64_t)(uintptr_t)t->stack_base);
 }
 
 /*
@@ -380,8 +375,10 @@ void sched_kick_idle(unsigned n) {
     struct thread* cur =
         __atomic_load_n(&cpu_locals[i].current, __ATOMIC_ACQUIRE);
     if (cur == cpu_locals[i].idle) { /* only wake cores actually idle */
-      /* gicv3_send_sgi(reschedule) arrives with the PSCI/IPI slice
-       * (next R1 commit); with ncpus == 1 this loop body never runs. */
+      /* TargetList is bit-per-Aff0-cpu — both targets are single-cluster
+       * (gicv3_send_sgi fills Aff1..3 = 0); multi-cluster boards extend
+       * the send, not this loop. */
+      gicv3_send_sgi(GICV3_SGI_RESCHED, 1u << i, false);
       kicked++;
     }
   }

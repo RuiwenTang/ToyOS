@@ -49,15 +49,17 @@ sdcard = { cmd = "scripts/boot/mksdcard.sh", depends-on = ["build"] }
 
 # Fast loop: QEMU's -kernel mini-loader, HVF near-native speed.
 # Exit with Ctrl-A x.
-boot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf -m 1G -nographic -kernel Build/aarch64/kernel/Image", depends-on = ["build"] }
+boot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel hvf -smp 4 -m 1G -nographic -kernel Build/aarch64/kernel/Image", depends-on = ["build"] }
 
 # Headless serial smoke regression (blueprint test layer 3): boot the
 # kernel, wait for the expected lines, kill QEMU. A few seconds end to
-# end, so it fits the ~1-minute agent-run rule.
+# end, so it fits the ~1-minute agent-run rule. smoke-tcg runs the same
+# regression under TCG (the U-Boot-path clock, 1 GHz CNTFRQ vs 24 MHz).
 smoke = { cmd = "python scripts/test/smoke.py", depends-on = ["build"] }
+smoke-tcg = { cmd = "TOYOS_SMOKE_ACCEL=tcg python scripts/test/smoke.py", depends-on = ["build"] }
 
 # Fidelity check: full U-Boot distro-boot from a virtio disk. TCG, not
 # HVF — u-boot.bin from flash shows no serial output under HVF. Requires
 # Build/u-boot/qemu/u-boot.bin (scripts/boot/build-uboot.sh, one-off).
 # Exit with Ctrl-A x (or wait out the 2s autoboot).
-boot-uboot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel tcg -m 1G -nographic -bios Build/u-boot/qemu/u-boot.bin -drive if=none,file=Build/boot/sd.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0", depends-on = ["sdcard"] }
+boot-uboot = { cmd = "qemu-system-aarch64 -M virt,gic-version=3 -cpu max -accel tcg -smp 4 -m 1G -nographic -bios Build/u-boot/qemu/u-boot.bin -drive if=none,file=Build/boot/sd.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0", depends-on = ["sdcard"] }

@@ -53,9 +53,7 @@ static void timer_tick(uint32_t intid) {
     system_ticks++;
 
     if (system_ticks <= 5) {
-      serial_puts("[Timer] tick #");
-      serial_print_dec(system_ticks);
-      serial_puts("\n");
+      serial_printf("[Timer] tick #%u\n", system_ticks);
     }
     sleep_check_wakeups(
         system_ticks); /* wake expired nanosleep / futex-timeout */

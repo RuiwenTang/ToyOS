@@ -18,13 +18,42 @@
   ported code, so no GPL attribution is required in port commits.
 - R0 complete (tagged `aarch64-r0`): dual-path acceptance — QEMU `-kernel Image`
   direct boot under HVF, and `-bios u-boot.bin` extlinux boot under TCG.
-- R1 in progress: exception vectors + GICv3 + EL1 virtual timer + IRQ dispatch
-  done; scheduler port done (sched.c/thread.c/sleep.c/percpu/spinlock from
-  ToyOS64 + switch.S + bootmmu.c; `pixi run smoke` green under HVF and TCG —
-  3 no-yield workers interleaving on tick preemption is the acceptance proof;
-  host GTest tree live: `pixi run test-host`, 37 tests over atomic.h + heap.c).
-  Remaining R1: PSCI CPU_ON secondary bring-up, SGI IPI echo; then tag
-  `aarch64-r1`.
+- R1 complete (tagged `aarch64-r1`): exception vectors + GICv3 + EL1 virtual
+  timer + IRQ dispatch; scheduler port (sched.c/thread.c/sleep.c/percpu/spinlock
+  from ToyOS64 + switch.S + bootmmu.c); PSCI CPU_ON secondary bring-up + SGI
+  IPI echo. `pixi run smoke` green under HVF and `pixi run smoke-tcg` green
+  under TCG, both `-smp 4`: acceptance = all cores online, 3 rounds of IPI
+  echo, 3 no-yield BSP workers + 2 no-yield workers per AP interleaving on
+  their own core's tick. Host GTest tree: `pixi run test-host`, 37 tests.
+- SMP bring-up shape (smp.c + secondary_entry in entry.S): PSCI CPU_ON
+  (fnid 0xC4000003, conduit from DTB /psci method — hvc on QEMU both boot
+  paths) releases each AP at EL2 → same settle as _start → per-AP boot
+  stack → VBAR → bootmmu_ap_enable (shared identity tables; per-core
+  SCTLR/TCR/TTBR) → secondary_main: percpu_init_ap (TPIDR bind only —
+  slots are ALL initialised by BSP's percpu_init, sched_init fills .idle,
+  so init_ap must never re-run cpu_local_init) → gicv3_init_ap (per-core
+  GICR wake + iface) → arm own CNTV → online handshake (release/acquire
+  on a bitmap) → idle-thread SP swap mirroring sched_start's tail.
+- QEMU GICv3 model quirk: `gicr_ienabler0` resets to 0 (real hardware
+  resets SGIs enabled = 0x0000FFFF), so an explicit GICR_ISENABLER0 write
+  is REQUIRED or SGIs are never delivered. But under QEMU 11.0.1 HVF,
+  writing 0xffff BEFORE the CPU-interface block (PMR/IGRPEN1) trips the
+  backend's `assert(isv)` (ISV=0 data-abort emulation, known-broken area;
+  TCG unaffected). Working shape on both accels: enable just the SGI ids
+  in use, AFTER the interface block. Also: HVF DOES emulate ICC_SGI1R_EL1
+  (routed to the shared TCG GIC handler — verify delivery issues against
+  the model's reset state before suspecting the accelerator).
+- Serial is SMP-safe at two granularities: putchar takes an irqsave lock
+  per character (keeps bytes intact), serial_printf formats the whole
+  line and drains it under one hold (one call = one intact line — a
+  per-char lock alone still interleaves lines mid-way). The lock is armed
+  by bootmmu_init (post-MMU); pre-MMU prints are unlocked single-core.
+- sched_kick_idle now sends SGI 0 (GICV3_SGI_RESCHED) via ICC_SGI1R_EL1 —
+  WFI wake only, the handler is EOI-only and the idle loop re-checks.
+- Timer note: the tick is one-shot with deadline += period on reload; if
+  the deadline expires while IRQs are masked (boot/bring-up windows), the
+  first unmask produces a bounded catch-up burst of ticks. Harmless but
+  visible in QEMU traces.
 - MMU must go on before the first atomic: with the MMU off all memory is
   Device type and atomics/exclusives are unsupported there (LDAXR faults
   DFSC 0x35 under HVF, LDADD 0x61 under TCG — first hit was heap_lock).

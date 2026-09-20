@@ -65,19 +65,25 @@ static inline struct cpu_local* this_cpu(void) {
 }
 
 /*
- * percpu_init - Bind the BSP to cpu_locals[0] and set TPIDR_EL1.
+ * percpu_init - Initialise EVERY cpu_locals slot the /cpus probe found
+ *               (run queue, run lock, self pointer, mpidr) and bind the
+ *               BSP to slot 0.
  *
- * Called from kmain() after gicv3_init() and before sched_init().
+ * Called from kmain() after smp_probe() and before gicv3_init() (the
+ * per-core GICR lookup indexes cpu_locals, so TPIDR must already point
+ * at slot 0). All-slots-here matters: a cross-CPU thread_create_on from
+ * the BSP touches cpu_locals[i].run_queue before core i ever runs, and
+ * sched_init() later fills .idle for slots 1..N-1.
  */
 void percpu_init(void);
 
 /*
- * percpu_init_ap - Bind an AP to cpu_locals[me] and set TPIDR_EL1.
+ * percpu_init_ap - Bind an AP to cpu_locals[me]: set TPIDR_EL1 only.
  *
- * @me: this CPU's slot index (1..ncpus-1). Called from the PSCI secondary
- *      entry (R1 next slice); mpidr is assumed pre-filled by the BSP-side
- *      bring-up. Unlike x86 there is no lgdt to clobber the base register
- *      on the way, so ordering relative to other per-CPU init is free.
+ * @me: this CPU's slot index (1..ncpus-1). Called from secondary_main;
+ *      the slot's contents are owned by percpu_init (static fields) and
+ *      sched_init/secondary_main (idle/current) — re-initialising here
+ *      would wipe them, so this must stay a bind-only operation.
  */
 void percpu_init_ap(uint32_t me);
 

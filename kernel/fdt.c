@@ -286,6 +286,90 @@ fdt_node_t fdt_find_compatible(const void* blob, const char* compat) {
   return FDT_NODE_INVALID;
 }
 
+/* --- Child iteration (SMP: walking /cpus) --- */
+
+static const uint32_t* node_body(const void* blob, fdt_node_t node) {
+  const uint32_t* base =
+      (const uint32_t*)((const uint8_t*)blob +
+                        hdr(blob, offsetof(struct fdt_header, off_struct)));
+  const uint32_t* p = (const uint32_t*)((const uint8_t*)base + node);
+  p++; /* BEGIN_NODE */
+  p = skip_name(p);
+  return p;
+}
+
+fdt_node_t fdt_child_first(const void* blob, fdt_node_t parent) {
+  const uint32_t* p;
+
+  if (fdt_valid(blob) == 0 || parent < 0) return FDT_NODE_INVALID;
+  p = node_body(blob, parent);
+
+  /* Properties come before children in the token stream; skip them. */
+  for (;;) {
+    uint32_t tok = be32(p);
+
+    if (tok == FDT_BEGIN_NODE)
+      return (int)((const uint8_t*)p - (const uint8_t*)blob -
+                   hdr(blob, offsetof(struct fdt_header, off_struct)));
+    if (tok == FDT_PROP) {
+      uint32_t len;
+      const char* name;
+
+      p = prop_data(p, &len, blob, &name);
+      p = (const uint32_t*)((const uint8_t*)p + ((len + 3) & ~3));
+    } else if (tok == FDT_NOP) {
+      p++;
+    } else {
+      return FDT_NODE_INVALID; /* END_NODE / END: no children */
+    }
+  }
+}
+
+fdt_node_t fdt_child_next(const void* blob, fdt_node_t node) {
+  const uint32_t *p, *base;
+
+  if (fdt_valid(blob) == 0 || node < 0) return FDT_NODE_INVALID;
+  base = (const uint32_t*)((const uint8_t*)blob +
+                           hdr(blob, offsetof(struct fdt_header, off_struct)));
+  p = node_body(blob, node);
+
+  /* Skip @node's subtree: consume tokens until its matching END_NODE. */
+  int depth = 1;
+  while (depth > 0) {
+    uint32_t tok = be32(p);
+
+    if (tok == FDT_BEGIN_NODE) {
+      depth++;
+      p++;
+      p = skip_name(p);
+    } else if (tok == FDT_END_NODE) {
+      depth--;
+      p++;
+    } else if (tok == FDT_PROP) {
+      uint32_t len;
+      const char* name;
+
+      p = prop_data(p, &len, blob, &name);
+      p = (const uint32_t*)((const uint8_t*)p + ((len + 3) & ~3));
+    } else {
+      p++; /* NOP (or END, which ends everything) */
+    }
+  }
+
+  /* Next sibling — or the parent's END_NODE. */
+  for (;;) {
+    uint32_t tok = be32(p);
+
+    if (tok == FDT_BEGIN_NODE)
+      return (int)((const uint8_t*)p - (const uint8_t*)base);
+    if (tok == FDT_NOP) {
+      p++;
+    } else {
+      return FDT_NODE_INVALID;
+    }
+  }
+}
+
 /* --- dump (R0 acceptance: DTB walk on serial) --- */
 
 static void print_indent(int depth) {
