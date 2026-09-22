@@ -37,7 +37,10 @@ add_executable(Kernel
     sched/sleep.c
     intr/timer.c
     mm/heap.c
-    mm/heap_provider_static.c
+    mm/heap_provider.c
+    mm/bitmap.c
+    mm/memmap.c
+    mm/pmm.c
     mm/kstack.c)
 set_target_properties(Kernel PROPERTIES OUTPUT_NAME Kernel SUFFIX ".elf")
 target_link_libraries(Kernel PRIVATE toyos_kernel_flags)

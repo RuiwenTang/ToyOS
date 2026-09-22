@@ -25,6 +25,25 @@
   under TCG, both `-smp 4`: acceptance = all cores online, 3 rounds of IPI
   echo, 3 no-yield BSP workers + 2 no-yield workers per AP interleaving on
   their own core's tick. Host GTest tree: `pixi run test-host`, 37 tests.
+- R2.1 complete (physical memory, first of the four R2 slices — see the
+  R2 slicing section in the blueprint): DTB `/memory` discovery
+  (device_type walk over root children — node names carry unit addresses,
+  never path-lookup) minus `/memreserve/` + kernel image + DTB blob →
+  memmap normalized regions (kernel/mm/memmap.c, pure build fn host-tested);
+  bitmap pmm ported from ToyOS64 (pmm.c — Limine memmap → memmap regions,
+  HHDM → pmm_phys_to_virt identity seam, pmm_reclaim_bootloader dropped);
+  heap provider now pmm-backed (heap_provider.c replaces the R1 static
+  arena); bootmmu maps discovered banks ([0, max(4 GiB, ram_top)) — RAM
+  blocks Normal, rest Device; L2 pool of 16 tables in .bss). Boot order
+  moved: memmap discovery runs PRE-MMU (DTB walk = plain loads, the one
+  thing legal on all-Device memory) so bootmmu can map real banks.
+  Acceptance: test-host 82/82 (bitmap 30 + memmap 15 new), smoke +
+  smoke-tcg green -smp 4 with R2.1 pmm PASS lines, U-Boot/TCG path boots
+  with correct reservations (U-Boot relocates the DTB near RAM top).
+  Heap contiguity invariant: heap pages never return to pmm mid-life, so
+  lowest-free-first keeps heap_grow's extend-in-place working while the
+  heap is the only runtime pmm client — revisit when R2.2 page tables
+  interleave.
 - SMP bring-up shape (smp.c + secondary_entry in entry.S): PSCI CPU_ON
   (fnid 0xC4000003, conduit from DTB /psci method — hvc on QEMU both boot
   paths) releases each AP at EL2 → same settle as _start → per-AP boot

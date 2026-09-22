@@ -11,11 +11,17 @@
  *
  * Scope, deliberately minimal (the R2 design — TTBR0/TTBR1 split, user
  * spaces, nG/AF/ASID discipline, CoW — is untouched by this):
- *   - two static tables in .bss: L0 + one L1
- *   - VA [0, 0x40000000)  → Device-nGnRE 1 GB blocks (all MMIO: GIC, PL011)
- *   - VA [0x40000000, 0x80000000) → Normal WB 1 GB block (QEMU virt's RAM
- *     base; RK3568 RAM starts at the same address)
- *   - everything else unmapped (faults — correct)
+ *   - two static tables in .bss: L0 + one L1, plus a pool of L2 tables
+ *   - coverage: [0, max(4 GiB, align_up(ram_top, 1 GiB))) — every 2 MiB
+ *     block inside a discovered RAM bank (memmap /memory walk) is Normal
+ *     WB, everything else in range is Device-nGnRE (MMIO wherever the
+ *     board put it: QEMU keeps it below 1 GiB; the RK3568 puts peripherals
+ *     above DRAM at 0xFD000000+), and above the range nothing is mapped
+ *     (faults — correct)
+ *   - a 2 MiB block straddling a bank edge maps Device; both targets' RAM
+ *     is 2 MiB-aligned so this cannot arise in practice, and if it ever
+ *     does the edge pages fault loudly at their first atomic rather than
+ *     corrupting silently
  *
  * Identity throughout (VA == PA), so enabling the MMU changes memory types,
  * not addresses. fdt.c's volatile byte loads (the Device-merge workaround)
@@ -25,7 +31,9 @@
  */
 
 #include <toyos/arch/aarch64/bootmmu.h>
+#include <toyos/arch/aarch64/cpu.h>
 #include <toyos/arch/aarch64/sysreg.h>
+#include <toyos/kernel/memmap.h>
 #include <toyos/kernel/serial.h>
 #include <toyos/kernel/types.h>
 
@@ -47,15 +55,33 @@
    | (1u << 10)                                    /* AF               */   \
    | (3u << 8))                                    /* SH               */
 
+#define L2_BYTES 4096u
+#define BLOCK_BYTES (2u * 1024 * 1024)
+#define L1_SLOT_BYTES (1u * 1024 * 1024 * 1024)
+
+/* One L2 table per 1 GiB L1 slot in coverage. The 4 GiB floor needs 4;
+ * 8 GiB of RK3568 DRAM (the ceiling target) reaches slot 9 → 10. The pool
+ * covers RAM up to ~13 GiB; more than that is a compile-time bump. */
+#define BOOT_L2_POOL 16
+
 /* Standard 3-level shape (the same one U-Boot/Linux boot on): L0 → L1
  * table → L2 2 MiB blocks. */
 static uint64_t boot_l0[512] __attribute__((aligned(4096)));
 static uint64_t boot_l1[512] __attribute__((aligned(4096)));
-static uint64_t boot_l2_mmio[512] __attribute__((aligned(4096)));
-static uint64_t boot_l2_ram[512] __attribute__((aligned(4096)));
+static uint64_t boot_l2_pool[BOOT_L2_POOL][512] __attribute__((aligned(4096)));
 
 static uint64_t table_desc(uint64_t* table) {
   return (uint64_t)(uintptr_t)table | DESC_TABLE;
+}
+
+/* Is [pa, pa+2 MiB) fully inside a discovered RAM bank? (Banks are sorted
+ * and merged by memmap, but a plain scan is fine — this runs once.) */
+static int block_is_ram(const mem_region_t* banks, size_t nbanks, uint64_t pa) {
+  for (size_t i = 0; i < nbanks; i++) {
+    if (pa >= banks[i].base && pa + BLOCK_BYTES <= banks[i].base + banks[i].len)
+      return 1;
+  }
+  return 0;
 }
 
 /* Program MAIR/TCR/TTBR0 from the (already built) static tables and turn
@@ -70,7 +96,7 @@ static void bootmmu_enable(void) {
 
   /* TCR_EL1: 48-bit VA (T0SZ=16), 4 KiB granule, 40-bit PA (IPS=2 — covers
    * QEMU virt and the RK3568's 36-bit), inner-shareable WB walk. TTBR1 is
-   * untouched (R2). */
+   * untouched (R2.2). */
   const uint64_t tcr = (16u << 0)     /* T0SZ */
                        | (0u << 14)   /* TG0 = 4 KiB */
                        | (3u << 12)   /* SH0 inner-shareable */
@@ -92,16 +118,37 @@ static void bootmmu_enable(void) {
   barrier_isb();
 }
 
-void bootmmu_init(void) {
-  /* [0, 1 GB) MMIO → Device; [1 GB, 2 GB) = 0x40000000.. → RAM → Normal.
-   * L2 blocks are 2 MiB: one L2 table per 1 GiB L1 slot. */
-  for (int i = 0; i < 512; i++) {
-    boot_l2_mmio[i] = BLOCK_DESC((uint64_t)i << 21, ATTR_DEVICE);
-    boot_l2_ram[i] =
-        BLOCK_DESC(0x40000000ull + ((uint64_t)i << 21), ATTR_NORMAL);
+void bootmmu_init(const mem_region_t* banks, size_t nbanks) {
+  /* Coverage: [0, max(4 GiB, align_up(ram_top, 1 GiB))). The 4 GiB floor
+   * keeps the RK3568's above-DRAM peripherals mapped (they live below
+   * 4 GiB); QEMU virt keeps all MMIO in slot 0 either way. */
+  uint64_t ram_top = memmap_ram_top();
+  uint64_t cover_end = 4ull * 1024 * 1024 * 1024;
+  uint64_t ram_top_aligned =
+      (ram_top + L1_SLOT_BYTES - 1) & ~(uint64_t)(L1_SLOT_BYTES - 1);
+  if (ram_top_aligned > cover_end) cover_end = ram_top_aligned;
+
+  size_t slots = (size_t)(cover_end / L1_SLOT_BYTES);
+  if (slots > BOOT_L2_POOL) {
+    serial_puts("mmu: coverage needs ");
+    serial_print_dec(slots);
+    serial_puts(" L2 tables, pool is ");
+    serial_print_dec(BOOT_L2_POOL);
+    serial_puts(" — bump BOOT_L2_POOL\n");
+    cpu_halt();
   }
-  boot_l1[0] = table_desc(boot_l2_mmio);
-  boot_l1[1] = table_desc(boot_l2_ram);
+
+  for (size_t s = 0; s < slots; s++) {
+    uint64_t* l2 = boot_l2_pool[s];
+    for (uint32_t b = 0; b < 512; b++) {
+      uint64_t pa = (uint64_t)s * L1_SLOT_BYTES + (uint64_t)b * BLOCK_BYTES;
+      l2[b] = block_is_ram(banks, nbanks, pa) ? BLOCK_DESC(pa, ATTR_NORMAL)
+                                              : BLOCK_DESC(pa, ATTR_DEVICE);
+    }
+    boot_l1[s] = table_desc(l2);
+  }
+  for (size_t s = slots; s < 512; s++) boot_l1[s] = 0; /* unmapped */
+
   boot_l0[0] = table_desc(boot_l1);
 
   bootmmu_enable();
@@ -109,7 +156,11 @@ void bootmmu_init(void) {
   /* From here on RAM is Normal and atomics are legal — arm the serial
    * SMP lock (unlocked plain MMIO until now, safe only single-core). */
   serial_smp_arm();
-  serial_puts("mmu: boot identity map on — RAM Normal WB, MMIO Device\n");
+  serial_puts("mmu: boot identity map on — RAM top ");
+  serial_print_hex(ram_top);
+  serial_puts(", ");
+  serial_print_dec(nbanks);
+  serial_puts(" bank(s) Normal WB, rest Device\n");
 }
 
 void bootmmu_ap_enable(void) {

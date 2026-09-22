@@ -4,11 +4,13 @@
  * entry.S has already settled the core to EL1, cleared .bss and set up the
  * boot stack; kmain receives the DTB pointer from the boot contract (x0).
  *
- * Boot order (R1 final shape, mirroring ToyOS64's kernel_main for
- * everything this slice ports):
- *   percpu probe → MMU → FDT → GIC → timer → percpu → heap → kstack →
- *   sleep → sched_init (+ smoke workers) → timer arm → PSCI bring-up →
- *   SGI echo → per-core workers → sched_start
+ * Boot order (R2.1 shape, mirroring ToyOS64's kernel_main for everything
+ * this slice ports):
+ *   serial → FDT + memmap discovery (physical memory, pre-MMU: plain
+ *   loads) → MMU (identity map of the discovered banks) → GIC → timer →
+ *   percpu → pmm (+ smoke) → heap (pmm provider) → kstack → sleep →
+ *   sched_init (+ smoke workers) → timer arm → PSCI bring-up → SGI echo →
+ *   per-core workers → sched_start
  * All with IRQs masked until sched_start (except the bounded echo-test
  * window, safe because pre-start ticks are gated to EOI+reload). From
  * sched_start on, kmain's context IS the boot/idle thread.
@@ -25,11 +27,17 @@
 #include <toyos/kernel/fdt.h>
 #include <toyos/kernel/heap.h>
 #include <toyos/kernel/kstack.h>
+#include <toyos/kernel/memmap.h>
 #include <toyos/kernel/percpu.h>
+#include <toyos/kernel/pmm.h>
 #include <toyos/kernel/sched.h>
 #include <toyos/kernel/serial.h>
 #include <toyos/kernel/timer.h>
 #include <toyos/kernel/types.h>
+
+/* Whole-image extent from the linker (header slot through the boot stack;
+ * .bss and the AP boot stacks live inside) — reserved from the pmm. */
+extern const char __kernel_start[], __kernel_end[];
 
 #define SMOKE_THREADS 3
 #define SMOKE_ITERS 3
@@ -104,22 +112,60 @@ static void smp_worker(void* arg) {
   thread_exit();
 }
 
+/* --- R2.1 pmm smoke (acceptance: "heap runs on pmm" preconditions) ---
+ *
+ * Accounting + contiguity + a write through the identity map: alloc/free
+ * must move the free count by exactly the right amounts and come back to
+ * the baseline, the 4-page alloc must be physically contiguous, and both
+ * ends must be writable through pmm_phys_to_virt (a Normal-WB-typed page
+ * per bootmmu — a mis-typed or unmapped page faults right here instead of
+ * inside the scheduler later). Runs before kernel_heap_init so the heap's
+ * own pages are never interleaved with the smoke's. */
+static int pmm_smoke(void) {
+  size_t free0 = pmm_free_page_count();
+
+  uintptr_t p1 = pmm_alloc();
+  if (p1 == 0 || (p1 & (PAGE_SIZE - 1)) != 0) return 0;
+  if (pmm_free_page_count() != free0 - 1) return 0;
+
+  uintptr_t p4 = pmm_alloc_pages(4);
+  if (p4 == 0 || (p4 & (PAGE_SIZE - 1)) != 0) return 0;
+  if (pmm_free_page_count() != free0 - 5) return 0;
+  /* the two allocations must not overlap */
+  if (p1 >= p4 && p1 < p4 + 4 * PAGE_SIZE) return 0;
+  for (int i = 0; i < 4; i += 3) { /* first + last page writable */
+    volatile uint64_t* page = pmm_phys_to_virt(p4 + (uintptr_t)i * PAGE_SIZE);
+    *page = 0x524F5953ull; /* "SYOR" */
+    if (*page != 0x524F5953ull) return 0;
+  }
+
+  /* refcounts: fresh frame is 1, inc/dec balanced */
+  if (pmm_refcount_get(p1) != 1) return 0;
+  pmm_refcount_inc(p1);
+  if (pmm_refcount_get(p1) != 2) return 0;
+  if (pmm_refcount_dec(p1) != 1) return 0;
+
+  pmm_free(p1);
+  pmm_free_pages(p4, 4);
+  return pmm_free_page_count() == free0;
+}
+
 void kmain(const void* dtb) {
   uint32_t size;
 
   serial_init();
-  serial_puts("\nToyOS aarch64 R1\n");
+  serial_puts("\nToyOS aarch64 R2\n");
   serial_puts("boot EL: EL");
   serial_print_dec(current_el());
   serial_puts(", dtb @ ");
   serial_print_hex((uintptr_t)dtb);
   serial_puts("\n");
 
-  /* Before the first atomic/exclusive instruction (the scheduler's
-   * spinlocks): Device memory doesn't support them. Identity map only —
-   * RAM becomes Normal WB, MMIO stays Device; R2's paging replaces this. */
-  bootmmu_init();
-
+  /* Physical memory discovery runs pre-MMU: the DTB walk is plain (narrow,
+   * volatile where it matters) loads and everything printed below is
+   * single-core unlocked serial — the two things that stay legal on
+   * all-Device memory. bootmmu then maps the discovered banks instead of
+   * a hardcoded 1 GiB. */
   size = fdt_valid(dtb);
   if (size == 0) {
     serial_puts("fdt: invalid blob, halting\n");
@@ -128,6 +174,16 @@ void kmain(const void* dtb) {
   serial_puts("fdt: blob size ");
   serial_print_dec(size);
   serial_puts("\n");
+
+  memmap_init(dtb, (uint64_t)(uintptr_t)__kernel_start,
+              (uint64_t)(uintptr_t)__kernel_end,
+              (uint64_t)(uintptr_t)dtb + size);
+
+  {
+    size_t nbanks = 0;
+    const mem_region_t* banks = memmap_banks(&nbanks);
+    bootmmu_init(banks, nbanks);
+  }
 
   fdt_node_t chosen = fdt_find_node(dtb, "/chosen");
   serial_puts("fdt: /chosen node @ ");
@@ -157,6 +213,21 @@ void kmain(const void* dtb) {
     cpu_halt();
   }
   arch_timer_init();
+
+  serial_puts("\nR2.1: physical memory manager\n");
+  {
+    size_t nregions = 0;
+    const mem_region_t* usable = memmap_usable(&nregions);
+    pmm_init(usable, nregions);
+  }
+  if (pmm_smoke()) {
+    serial_puts(
+        "R2.1: pmm smoke PASS — alloc/free accounting + contiguity "
+        "+ identity-map writeback\n");
+  } else {
+    serial_puts("R2.1: pmm smoke FAIL, halting\n");
+    cpu_halt();
+  }
 
   serial_puts("\nR1: scheduler bring-up\n");
   kernel_heap_init();

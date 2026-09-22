@@ -39,7 +39,7 @@
  * (MT bit, the RES1 bit 31) is not affinity. */
 #define MPIDR_AFF_MASK (0xffffffull | (0xffull << 32))
 
-#define SGI_ECHO 1 /* GICV3_SGI_RESCHED (0) lives in gicv3.h — sched uses it */
+#define SGI_ECHO 1 /* sched owns SGI 0 (GICV3_SGI_RESCHED) */
 
 /* 16 KiB per AP, matching the entry.S reservation (slot i-1 for core i). */
 #define AP_BOOT_STACK_SIZE 0x4000
@@ -58,9 +58,7 @@ static volatile uint32_t smp_online_mask; /* bit i set once core i is up */
 
 unsigned smp_cpu_count(void) { return smp.count; }
 
-uint64_t smp_cpu_mpidr(unsigned i) {
-  return i < smp.count ? smp.mpidr[i] : 0;
-}
+uint64_t smp_cpu_mpidr(unsigned i) { return i < smp.count ? smp.mpidr[i] : 0; }
 
 void smp_probe(const void* dtb) {
   uint64_t boot_aff = read_mpidr() & MPIDR_AFF_MASK;
@@ -119,7 +117,7 @@ out:
 
 /* --- SGI handlers --- */
 
-static volatile uint32_t echo_rx;      /* BSP-side: echoes received */
+static volatile uint32_t echo_rx;              /* BSP-side: echoes received */
 static volatile uint32_t echo_count[MAX_CPUS]; /* per-AP: echoes sent back */
 
 /* Wake-only: the target's sched_idle_loop re-checks its run queue after
@@ -225,9 +223,9 @@ void secondary_main(uint32_t me) {
    * thread's guarded kstack, first schedule(), then the idle loop. The
    * idle thread's pre-built initial frame is simply never consumed — the
    * first switch OUT of here writes a real resume SP over it. */
-  uint64_t new_sp = (uint64_t)(uintptr_t)idle->stack_base +
-                    (KSTACK_GUARD_PAGES + THREAD_STACK_SIZE / PAGE_SIZE) *
-                        PAGE_SIZE;
+  uint64_t new_sp =
+      (uint64_t)(uintptr_t)idle->stack_base +
+      (KSTACK_GUARD_PAGES + THREAD_STACK_SIZE / PAGE_SIZE) * PAGE_SIZE;
   __asm__ volatile("mov sp, %0" ::"r"(new_sp) : "memory");
 
   schedule();
@@ -250,7 +248,8 @@ void smp_echo_test(void) {
     uint64_t deadline = arch_timer_counter() + arch_timer_freq();
     while (__atomic_load_n(&echo_rx, __ATOMIC_ACQUIRE) < smp.count - 1) {
       if (arch_timer_counter() > deadline) {
-        serial_printf("SMP: IPI echo FAIL (timeout in round %u)\n", (uint64_t)r);
+        serial_printf("SMP: IPI echo FAIL (timeout in round %u)\n",
+                      (uint64_t)r);
         irq_disable();
         return;
       }

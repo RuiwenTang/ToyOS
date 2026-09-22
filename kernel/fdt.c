@@ -370,6 +370,25 @@ fdt_node_t fdt_child_next(const void* blob, fdt_node_t node) {
   }
 }
 
+/* --- /memreserve/ block (R2.1: physical memory discovery) --- */
+
+int fdt_mem_rsv(const void* blob, int idx, uint64_t* addr, uint64_t* size) {
+  if (fdt_valid(blob) == 0 || idx < 0) return -1;
+
+  const uint8_t* p = (const uint8_t*)blob +
+                     hdr(blob, offsetof(struct fdt_header, off_mem_rsvmap)) +
+                     (size_t)idx * 16;
+  /* fdt_cell64's volatile byte loads keep the reads narrow (the DTB may
+   * sit in still-Device memory when this runs, pre-bootmmu). */
+  uint64_t a = fdt_cell64(p);
+  uint64_t s = fdt_cell64(p + 8);
+  if (a == 0 && s == 0) return -1; /* terminator */
+
+  if (addr) *addr = a;
+  if (size) *size = s;
+  return idx + 1;
+}
+
 /* --- dump (R0 acceptance: DTB walk on serial) --- */
 
 static void print_indent(int depth) {

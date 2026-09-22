@@ -175,6 +175,40 @@ tree, the host tree never sees the cross toolchain and vice versa):
 R0–R4 develop against QEMU with HVF; real-hardware bring-up interleaves as
 R5 (storage must be debugged on the board due to DMA coherence).
 
+## R2 slicing (agreed 2026-09-22, before any R2 code)
+
+R2 is too big for one acceptance gate; it lands in four slices, each green
+before the next starts. The R2 row in the phase table above is satisfied
+when R2.4's acceptance passes.
+
+| Slice | Scope | Acceptance |
+|---|---|---|
+| R2.1 | physical memory: DTB `/memory` discovery (device_type walk, reg cells, multi-bank) minus `/memreserve/` + kernel image + DTB blob → normalized usable regions; bitmap pmm (ToyOS64 pmm.c ported, Limine memmap → region list); heap provider static arena → pmm; bootmmu maps discovered banks instead of a hardcoded 1 GiB | host GTest for bitmap + memmap normalization green; `pixi run smoke` + `smoke-tcg` green `-smp 4` with new pmm PASS lines (alloc/free accounting round-trips, contiguous alloc works, heap runs on pmm) |
+| R2.2 | real paging: kernel VA layout decision, TTBR1 higher-half kernel, identity trampoline during switchover, per-thread kstack guard pages, real `__clear_cache` | smoke green at the new VA; guard-page overflow faults instead of corrupting; kstack real allocator |
+| R2.3 | syscall path: `syscall_entry.S` + LOWER_EL vector slots + per-thread kernel stack on exception entry + fpu.c (CPACR/eager save) | SVC round-trip from EL0 with GPRs intact |
+| R2.4 | fork/exec + CoW (RO + write-fault, no dirty bit) + IPC port (mm/vmm/process from ToyOS64) | in-QEMU static tests pass (hello/fork/cow/ipc/exec) — the phase-table R2 gate |
+
+Decisions taken with R2.1 (the open questions from planning):
+
+- **pmm granularity**: 4 KiB per bitmap bit, exactly upstream's shape. On
+  8 GiB (RK3568 max) that is a 256 KiB bitmap + 4 MiB refcount table
+  (u16 per frame for CoW) placed in the first region that fits — acceptable
+  boot cost, zero design drift.
+- **VA seam**: the kernel stays identity-mapped through R2.1
+  (`pmm_phys_to_virt(pa) == pa`). R2.2's direct map changes only those two
+  inline conversions plus the bootmmu tables — no pmm/heap rewrite.
+- **bootmmu coverage**: map `[0, max(4 GiB, align_up(ram_top, 1 GiB)))` —
+  blocks inside a discovered RAM bank are Normal WB, everything else in
+  range is Device-nGnRE, above it faults. The 4 GiB floor covers the
+  RK3568's peripherals above DRAM (0xFD000000+); QEMU virt keeps all MMIO
+  below 1 GiB. This stays scaffolding — R2.2 replaces it with the real
+  TTBR0/TTBR1 trees.
+- **Dropped from the port**: `pmm_reclaim_bootloader` (Limine-specific —
+  our boot path excludes the kernel/DTB up front via memmap, and
+  bootloader memory arrives as DTB `/memreserve/` entries instead).
+- **Deferred to R2.2's blueprint text**: kernel VA layout (higher-half
+  base, direct-map window size, ASID plan details).
+
 R1 staging notes (scheduler slice): the MMU goes on at boot via a static
 identity map (`kernel/arch/aarch64/bootmmu.c`) — RAM Normal WB, MMIO
 Device — because Device memory does not support atomics/exclusives and the

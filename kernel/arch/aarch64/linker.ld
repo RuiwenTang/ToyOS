@@ -27,6 +27,8 @@ SECTIONS
      * let the vector table's 2 KiB alignment drag the whole section (and
      * _start with it) up to 0x40080800 — every cross-page ADRP then
      * addressed memory 0x7C0 below where the code actually ran. */
+    . = 0x40080000;
+    __kernel_start = .;   /* includes the header slot — memmap reserves from here */
     . = 0x40080040;
 
     .text.boot : {
@@ -64,6 +66,11 @@ SECTIONS
     }
     . = ALIGN(16);
     __stack_top = .;
+
+    /* Whole-image extent (header slot through boot stack; .bss and the AP
+     * boot stacks live inside): memmap_init reserves this from the pmm. */
+    . = ALIGN(4096);
+    __kernel_end = .;
 
     /DISCARD/ : {
         *(.comment)

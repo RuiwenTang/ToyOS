@@ -73,8 +73,7 @@ int psci_init(const void* dtb) {
   return 0;
 }
 
-int32_t psci_cpu_on(uint64_t target_cpu, uintptr_t entry,
-                    uint64_t context_id) {
+int32_t psci_cpu_on(uint64_t target_cpu, uintptr_t entry, uint64_t context_id) {
   if (conduit == PSCI_CONDUIT_NONE) return PSCI_NOT_SUPPORTED;
   return psci_call(PSCI_FN_CPU_ON_64, target_cpu, (uint64_t)entry, context_id);
 }

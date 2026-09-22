@@ -60,4 +60,10 @@ void fdt_dump(const void* blob);
 fdt_node_t fdt_child_first(const void* blob, fdt_node_t parent);
 fdt_node_t fdt_child_next(const void* blob, fdt_node_t node);
 
+/* --- /memreserve/ block (R2.1: physical memory discovery) ---
+ * The FDT's memory reservation block is an array of (address, size) u64
+ * pairs, big-endian, terminated by an all-zero entry. Iterate with
+ * idx = 0, 1, ... until it returns -1. Entries may be 0-length (skip). */
+int fdt_mem_rsv(const void* blob, int idx, uint64_t* addr, uint64_t* size);
+
 #endif /* TOYOS_KERNEL_FDT_H */
