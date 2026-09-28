@@ -91,7 +91,7 @@ static int gicv3_parse_fdt(const void* dtb) {
     return -1;
   }
 
-  gicd_base = (uintptr_t)fdt_cell64(reg);
+  gicd_base = mmio((uintptr_t)fdt_cell64(reg)); /* PA -> live device window */
 
   uint32_t regions = 1;
   fdt_get_prop_u32(dtb, node, "#redistributor-regions", &regions);
@@ -141,7 +141,7 @@ static int gicr_find_and_wake(void) {
   for (uint32_t r = 0; r < rdist_region_count; r++) {
     uint64_t frames = rdist_regions[r].size / rdist_stride;
     for (uint64_t i = 0; i < frames; i++) {
-      uintptr_t rd = rdist_regions[r].base + i * rdist_stride;
+      uintptr_t rd = mmio(rdist_regions[r].base) + i * rdist_stride;
       uint32_t typer_hi = mmio_read32(rd + GICR_TYPER + 4);
       if (typer_hi != want) continue;
 
@@ -236,9 +236,10 @@ int gicv3_init_ap(void) {
    * matters under QEMU 11.0.1 HVF: before the CPU-interface block, with
    * value 0xffff, this same write tripped the backend's assert(isv) on
    * the MMIO-exit path; after the block, with just the ids in use
-   * (resched 0 + echo 1), both accelerators run clean. PPIs stay off
-   * until individually enabled (the timer's INTID 27). */
-  mmio_write32(rd + GICR_ISENABLER0, (1u << GICV3_SGI_RESCHED) | (1u << 1));
+   * (0 = resched, 1 = echo, 2 = trampoline drop), both accelerators run
+   * clean. PPIs stay off until individually enabled (the timer's 27). */
+  mmio_write32(rd + GICR_ISENABLER0,
+               (1u << GICV3_SGI_RESCHED) | (1u << 1) | (1u << 2));
 
   return 0;
 }

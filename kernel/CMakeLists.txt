@@ -27,6 +27,8 @@ add_executable(Kernel
     arch/aarch64/arch_timer.c
     arch/aarch64/serial_pl011.c
     arch/aarch64/bootmmu.c
+    arch/aarch64/paging.c
+    arch/aarch64/cache.c
     arch/aarch64/psci.c
     arch/aarch64/smp.c
     arch/aarch64/switch.S

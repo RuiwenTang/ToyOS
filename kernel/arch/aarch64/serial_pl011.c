@@ -12,6 +12,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <toyos/arch/aarch64/mmio.h>
 #include <toyos/kernel/serial.h>
 #include <toyos/kernel/spinlock.h>
 #include <toyos/kernel/types.h>
@@ -35,7 +36,12 @@
 #define CR_TXE (1u << 8)
 #define CR_RXE (1u << 9)
 
-static volatile uint32_t* reg(uintptr_t off) { return (volatile uint32_t*)off; }
+/* reg() takes a full physical register address (PL011_DR etc. include the
+ * base); the device window indirection (mmio.h) resolves it to whichever
+ * VA window is live — identity trampoline, later the direct map. */
+static volatile uint32_t* reg(uintptr_t pa) {
+  return (volatile uint32_t*)mmio(pa);
+}
 
 /* SMP interleave lock. Polled TX reads FR and writes DR per character, so
  * without a lock two cores' lines interleave mid-character. Locked only at

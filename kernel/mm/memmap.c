@@ -51,8 +51,7 @@ size_t memmap_build(const mem_region_t* banks, size_t nbanks,
    * a partial page at either edge is never handed out. */
   for (size_t i = 0; i < nbanks; i++) {
     uint64_t base = align_up64(banks[i].base, MEMMAP_PAGE_SIZE);
-    uint64_t end = align_down64(banks[i].base + banks[i].len,
-                                MEMMAP_PAGE_SIZE);
+    uint64_t end = align_down64(banks[i].base + banks[i].len, MEMMAP_PAGE_SIZE);
     if (end <= base) continue;
     if (nmerged == MEMMAP_MAX_BANKS) return MEMMAP_BUILD_OVERFLOW;
     merged[nmerged].base = base;
@@ -92,8 +91,8 @@ size_t memmap_build(const mem_region_t* banks, size_t nbanks,
 
     for (size_t r = 0; r < nreserved && nfrags > 0; r++) {
       uint64_t rbase = align_down64(reserved[r].base, MEMMAP_PAGE_SIZE);
-      uint64_t rend = align_up64(reserved[r].base + reserved[r].len,
-                                 MEMMAP_PAGE_SIZE);
+      uint64_t rend =
+          align_up64(reserved[r].base + reserved[r].len, MEMMAP_PAGE_SIZE);
       if (rend <= rbase) continue; /* zero-length (or wrapped) reservation */
 
       for (size_t f = 0; f < nfrags; f++) {
@@ -103,15 +102,12 @@ size_t memmap_build(const mem_region_t* banks, size_t nbanks,
         /* Overlap: this fragment splits into at most a below-part and an
          * above-part. Build them, then rewrite the slot with below (if
          * any) and append above (if any). */
-        mem_region_t below = {frags[f].base,
-                              rbase > frags[f].base
-                                  ? rbase - frags[f].base
-                                  : 0};
+        mem_region_t below = {
+            frags[f].base, rbase > frags[f].base ? rbase - frags[f].base : 0};
         mem_region_t above = {rend, rend < fend ? fend - rend : 0};
 
         if (below.len > 0 && above.len > 0) {
-          if (nfrags == MEMMAP_MAX_RESERVED + 1)
-            return MEMMAP_BUILD_OVERFLOW;
+          if (nfrags == MEMMAP_MAX_RESERVED + 1) return MEMMAP_BUILD_OVERFLOW;
           frags[f] = below;
           frags[nfrags++] = above;
         } else if (below.len > 0) {
@@ -157,8 +153,7 @@ static size_t k_nusable;
 static uint64_t cells_to_u64(const void* data, uint32_t ncells) {
   const uint8_t* p = data;
   uint64_t v = 0;
-  for (uint32_t i = 0; i < ncells; i++)
-    v = (v << 32) | fdt_cell32(p + i * 4);
+  for (uint32_t i = 0; i < ncells; i++) v = (v << 32) | fdt_cell32(p + i * 4);
   return v;
 }
 
@@ -192,11 +187,9 @@ static int collect_banks(const void* dtb) {
     if (rlen < 0) continue;
 
     uint32_t stride = ac + sc;
-    for (uint32_t off = 0; off + stride <= (uint32_t)rlen / 4;
-         off += stride) {
+    for (uint32_t off = 0; off + stride <= (uint32_t)rlen / 4; off += stride) {
       uint64_t addr = cells_to_u64((const uint8_t*)reg + off * 4, ac);
-      uint64_t size =
-          cells_to_u64((const uint8_t*)reg + (off + ac) * 4, sc);
+      uint64_t size = cells_to_u64((const uint8_t*)reg + (off + ac) * 4, sc);
       if (size == 0) continue;
       if (k_nbanks == MEMMAP_MAX_BANKS) return -1;
       k_banks[k_nbanks].base = addr;
@@ -261,8 +254,8 @@ int memmap_init(const void* dtb, uint64_t kstart, uint64_t kend,
   serial_print_hex(dtb_end);
   serial_puts(")\n");
 
-  k_nusable = memmap_build(k_banks, k_nbanks, k_reserved, k_nreserved,
-                           k_usable, MEMMAP_MAX_REGIONS);
+  k_nusable = memmap_build(k_banks, k_nbanks, k_reserved, k_nreserved, k_usable,
+                           MEMMAP_MAX_REGIONS);
   if (k_nusable == MEMMAP_BUILD_OVERFLOW) {
     serial_puts("memmap: region overflow, halting\n");
     cpu_halt();

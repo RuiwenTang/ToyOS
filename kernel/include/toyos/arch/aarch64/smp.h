@@ -44,4 +44,10 @@ void secondary_main(uint32_t me);
  * safe pre-sched_start because ticks below g_sched_started only EOI+reload. */
 void smp_echo_test(void);
 
+/* R2.2 acceptance: flip the device window to the direct map and drop the
+ * identity trampoline on every core (BSP directly, APs via SGI). Call
+ * only after all cores are online (the echo test proves it) — after this,
+ * nothing below the link VA exists anywhere. */
+void smp_drop_trampolines(void);
+
 #endif /* TOYOS_ARCH_AARCH64_SMP_H */

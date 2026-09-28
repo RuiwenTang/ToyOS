@@ -39,6 +39,10 @@
 
 #include <toyos/kernel/types.h>
 
+/* Count of kstack guard-page kills (R2.2): traps.c increments before
+ * killing the overflowing thread; the guard smoke's witness polls it. */
+extern volatile uint32_t kstack_guard_hits;
+
 /* As pushed by trap_entry_asm, from low address to high. Above the struct
  * (+304) sits one more 16-byte staging pair the vector slot pushed: the
  * interrupted context's ORIGINAL x30, stashed before the slot loaded its

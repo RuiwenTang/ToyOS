@@ -44,6 +44,43 @@
   lowest-free-first keeps heap_grow's extend-in-place working while the
   heap is the only runtime pmm client — revisit when R2.2 page tables
   interleave.
+- R2.2 complete (higher-half kernel, second R2 slice — design in the
+  blueprint's "R2.2 design" section): kernel links at
+  0xFFFFFFFF80000000 (TTBR1 L0 slot 511), direct map at 0xFFFF800000000000
+  (slot 256, 512 GiB window), kstack at 0xFFFFFFFF00000000 / heap reserved
+  at 0xFFFFFFFF40000000 (kva.h). bootmmu builds BOTH trees (TTBR0 = R1
+  identity trampoline, TTBR1 = kernel tree; static roots — TTBR1 never
+  switches), entry.S jumps to the link VA (bootmmu_to_high) after
+  kmain_low's serial/memmap/init; APs enable both trees and jump high
+  immediately (CPU_ON takes the PHYSICAL secondary_entry —
+  kva_to_pa). After all cores run high: mmio window flips to the direct
+  map (mmio() in mmio.h — valid for all cores because TTBR1 is shared),
+  then each core drops its trampoline via SGI 2 (bootmmu_drop_trampoline,
+  empty TTBR0 + local tlbi vmalle1). kstack.c is the real port (dedicated
+  VA region, guard page = absent L3 entry, paging.c walker maps 4K pages
+  from pmm into the static-root kernel tree); traps.c kills a thread on a
+  kstack-region data abort (EC 0x25) after irq_enable() — killing from a
+  trap WITHOUT unmasking freezes the core (no tick ever again). Kernel
+  __clear_cache in cache.c (dc cvau → ic ivau → dsb+isb, line size from
+  CTR_EL0). Acceptance green: smoke + smoke-tcg -smp 4 (higher-half
+  switch, trampoline dropped on all cores, deliberate guard overflow
+  killed cleanly, witness PASS line), test-host 82/82, U-Boot/TCG path
+  at the new VA.
+- R2.2 debugging lessons (each cost a boot hang, all worth remembering):
+  (1) TCR_EL1 TG1 is at [31:30] with INVERTED encoding (0b10 = 4 KiB) —
+  writing it into TG0's slot [15:14] silently selects a 16 KiB TTBR0 walk
+  and every 4 KiB table miswalks (level-2 translation fault on the first
+  fetch after SCTLR.M). (2) C symbol references are position-relative
+  (ADRP/ADR): at the low world they already resolve to physical addresses
+  — kva_to_pa(&symbol) double-counts there; derive image PAs from the
+  KERNEL_IMAGE_BASE constant instead (kva.h's warning). (3) Passing a
+  function pointer for the high jump compiles to ADR → jumps to the LOW
+  copy; the target must come from an asm literal pool (=symbol). (4) The
+  bootmmu_to_high asm must deliver its payload in x0 (C ABI), not leave it
+  in x1. (5) L3 descriptor type bits must be 0b11 — a 0b01 "block" bit
+  pattern at level 3 is reserved and faults as a level-3 translation
+  fault even though the entry decodes as valid to the eye. (6) EC for
+  data abort from current EL is 0x25 (0x24 is the lower-EL variant).
 - SMP bring-up shape (smp.c + secondary_entry in entry.S): PSCI CPU_ON
   (fnid 0xC4000003, conduit from DTB /psci method — hvc on QEMU both boot
   paths) releases each AP at EL2 → same settle as _start → per-AP boot

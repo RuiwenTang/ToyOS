@@ -1,14 +1,14 @@
 /*
  * linker.ld — ToyOS aarch64 kernel memory layout
  *
- * Linked (and loaded) at RAM base + 0x80000, following the Linux arm64
- * text_offset convention: 0x40000000 (QEMU virt RAM base, 2 MiB-aligned)
- * + 0x80000 = 0x40080000. Both boot paths place the image here — QEMU's
- * -kernel loads the ELF at its program headers, U-Boot's booti honours the
- * image header's offset field — so the same binary runs either way.
- *
- * R0 runs identity-mapped at the physical address; the higher-half
- * TTBR0/TTBR1 split arrives with paging in R2.
+ * R2.2: the kernel links at the high-half image region (TTBR1 L0 slot
+ * 511, L1 #510 — see kva.h). The Image still LOADS at RAM base + 0x80000
+ * (arm64 text_offset convention; both loaders honour the Image header,
+ * not the link VA), and runs there under the identity trampoline until
+ * bootmmu turns on both TTBRs and entry.S jumps to the link VA. All C
+ * references are ADRP-relative, which resolve against the running PC —
+ * valid at either base — so only hand-written asm needs the load/link
+ * delta (entry.S owns it).
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -17,19 +17,18 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* The 64-byte arm64 boot header (attached by scripts/boot/mkimage.py)
-     * occupies [0x40080000, 0x40080040); code links at +0x40 so that
-     * run-time PC == link-time PC under both loaders (QEMU places the
-     * whole Image at RAM base + text_offset; the ELF's program headers
-     * agree).
+    /* Link base = KERNEL_IMAGE_BASE + 0x40: the 64-byte arm64 boot header
+     * (attached by scripts/boot/mkimage.py) occupies the image's first
+     * page prefix, so code links at +0x40 to keep file offset == VA -
+     * base under both loaders.
      *
      * .text.boot must be its own output section: folding it into .text
      * let the vector table's 2 KiB alignment drag the whole section (and
-     * _start with it) up to 0x40080800 — every cross-page ADRP then
-     * addressed memory 0x7C0 below where the code actually ran. */
-    . = 0x40080000;
-    __kernel_start = .;   /* includes the header slot — memmap reserves from here */
-    . = 0x40080040;
+     * _start with it) off its link position — every cross-page ADRP then
+     * addressed memory below where the code actually ran. */
+    . = 0xFFFFFFFF80000000;
+    __kernel_start = .;   /* VA; memmap reserves the PA extent via kimage_offset */
+    . = 0xFFFFFFFF80000040;
 
     .text.boot : {
         KEEP(*(.text.boot))

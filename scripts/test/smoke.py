@@ -35,6 +35,12 @@ QEMU_CMD = [
 # tick-preemption proof (the workers never yield). Every worker/iter pair
 # is listed so a lost switch fails loudly.
 EXPECTED = [
+    # --- R2.2 acceptance: higher-half kernel + guarded kstacks ---
+    b"R2.2: executing at the link VA",
+    b"R2.2: device window flipped to the direct map",
+    b"R2.2: trampoline dropped on all",
+    b"kernel: kstack GUARD HIT",
+    b"R2.2: kstack guard smoke PASS",
     # --- R2.1 acceptance: real physical memory ---
     b"memmap: bank",                     # /memory discovery (base varies)
     b"memmap: kernel image [",           # image + dtb reservations active
@@ -42,7 +48,7 @@ EXPECTED = [
     b"[PMM] Free pages: ",
     b"R2.1: pmm smoke PASS",
     b"[heap] provider: pmm",
-    b"mmu: boot identity map on",
+    b"mmu: trampoline (TTBR0) + kernel tree (TTBR1) on",
     # --- R1 acceptance (unchanged) ---
     b"R1: returned from SVC, context restore OK",
     b"gic: distributor + redistributor + cpu interface online",

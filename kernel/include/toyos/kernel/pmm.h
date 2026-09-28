@@ -12,6 +12,7 @@
 #ifndef TOYOS_KERNEL_PMM_H
 #define TOYOS_KERNEL_PMM_H
 
+#include <toyos/arch/aarch64/kva.h>
 #include <toyos/kernel/memmap.h>
 #include <toyos/kernel/types.h>
 
@@ -99,16 +100,16 @@ size_t pmm_total_pages(void);
 size_t pmm_free_page_count(void);
 
 /*
- * PA<->VA seam. R2.1 runs the kernel identity-mapped, so these are the
- * identity; R2.2's higher-half move re-points them at the direct-map
- * offset and nothing else in pmm/heap changes.
+ * PA<->VA seam. R2.2: the kernel runs at the higher-half link VA and
+ * reaches RAM through the direct map (kva.h) — these were the identity
+ * conversions in R2.1.
  */
 static inline void* pmm_phys_to_virt(uintptr_t pa) {
-  return (void*)pa;
+  return (void*)(pa + KERNEL_DM_BASE);
 }
 
 static inline uintptr_t pmm_virt_to_phys(void* va) {
-  return (uintptr_t)va;
+  return (uintptr_t)va - KERNEL_DM_BASE;
 }
 
 #endif /* TOYOS_KERNEL_PMM_H */

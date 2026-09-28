@@ -19,9 +19,9 @@
  * build logic has no pmm dependency. */
 #define MEMMAP_PAGE_SIZE 4096
 
-#define MEMMAP_MAX_BANKS 16     /* /memory reg tuples across all nodes */
-#define MEMMAP_MAX_RESERVED 32  /* /memreserve/ + kernel + DTB entries */
-#define MEMMAP_MAX_REGIONS 32   /* normalized usable output */
+#define MEMMAP_MAX_BANKS 16    /* /memory reg tuples across all nodes */
+#define MEMMAP_MAX_RESERVED 32 /* /memreserve/ + kernel + DTB entries */
+#define MEMMAP_MAX_REGIONS 32  /* normalized usable output */
 
 /* memmap_build error return: output capacity exceeded (or inputs nested
  * too deeply) — a boot-fatal condition, not a partial result. */

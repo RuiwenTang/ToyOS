@@ -12,13 +12,18 @@
 
 #include <toyos/arch/aarch64/cpu.h>
 #include <toyos/arch/aarch64/gicv3.h>
+#include <toyos/arch/aarch64/kva.h>
 #include <toyos/arch/aarch64/trap.h>
+#include <toyos/kernel/sched.h>
 #include <toyos/kernel/serial.h>
 #include <toyos/kernel/types.h>
 
 /* ESR_EL1.EC — exception class, bits [31:26]. */
 #define EC_UNKNOWN 0x00
 #define EC_SVC64 0x15 /* SVC from AArch64, any EL */
+#define EC_DATA_ABORT_CUR                       \
+  0x25 /* data abort from THIS EL (guard hits); \
+        * 0x24 is the lower-EL variant */
 
 static const char* class_name(uint64_t class) {
   switch (class) {
@@ -71,6 +76,8 @@ static uint64_t read_far(void) {
   return v;
 }
 
+volatile uint32_t kstack_guard_hits;
+
 static void trap_dump(const struct trap_frame* f, const char* why) {
   uint64_t esr = read_esr();
 
@@ -110,6 +117,28 @@ void trap_dispatch(struct trap_frame* f) {
     serial_print_hex(f->elr);
     serial_puts(" — vector path OK\n");
     return;
+  }
+
+  /* R2.2: kstack guard hit. A data abort whose FAR lands inside the
+   * dedicated kstack VA region can only be a downward stack overflow —
+   * the guard page is the only unmapped hole there, and the direct map
+   * (which would alias the PA) is a different L0 slot. Kill the thread
+   * instead of halting: the faulting frame is abandoned by thread_exit's
+   * switch-away, and the killer never returns here. Unmask IRQs first —
+   * exception entry masked them, we never ERET back through the frame,
+   * and the next thread inherits PSTATE as-is (a masked core would never
+   * take another tick and the scheduler would freeze mid-poll). */
+  if (f->class == TRAP_SYNC_CUR_SPX && ec == EC_DATA_ABORT_CUR) {
+    uint64_t far = read_far();
+    if (far >= KERNEL_KSTACK_BASE &&
+        far < KERNEL_KSTACK_BASE + KERNEL_KSTACK_SIZE) {
+      kstack_guard_hits++;
+      serial_puts("\nkernel: kstack GUARD HIT (far ");
+      serial_print_hex(far);
+      serial_puts(") — stack overflow, killing thread\n");
+      irq_enable();
+      thread_exit(); /* noreturn */
+    }
   }
 
   trap_dump(f, "unexpected");

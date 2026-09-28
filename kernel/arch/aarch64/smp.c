@@ -22,6 +22,8 @@
 #include <toyos/arch/aarch64/bootmmu.h>
 #include <toyos/arch/aarch64/cpu.h>
 #include <toyos/arch/aarch64/gicv3.h>
+#include <toyos/arch/aarch64/kva.h>
+#include <toyos/arch/aarch64/mmio.h>
 #include <toyos/arch/aarch64/psci.h>
 #include <toyos/arch/aarch64/smp.h>
 #include <toyos/arch/aarch64/sysreg.h>
@@ -39,7 +41,8 @@
  * (MT bit, the RES1 bit 31) is not affinity. */
 #define MPIDR_AFF_MASK (0xffffffull | (0xffull << 32))
 
-#define SGI_ECHO 1 /* sched owns SGI 0 (GICV3_SGI_RESCHED) */
+#define SGI_ECHO 1       /* sched owns SGI 0 (GICV3_SGI_RESCHED) */
+#define SGI_TRAMP_DROP 2 /* R2.2: per-core identity trampoline drop */
 
 /* 16 KiB per AP, matching the entry.S reservation (slot i-1 for core i). */
 #define AP_BOOT_STACK_SIZE 0x4000
@@ -138,9 +141,60 @@ static void sgi_echo_handler(uint32_t intid) {
   gicv3_send_sgi(SGI_ECHO, 1u << 0, false);
 }
 
+/* R2.2: per-core identity trampoline drop. Runs in IRQ context after the
+ * device window has flipped to the direct map — this core executes at its
+ * link VA and every device register it can touch (serial via the flip,
+ * GIC EOI below) is reachable through TTBR1 alone, so TTBR0 can go. */
+static volatile uint32_t smp_dropped_mask;
+
+static void sgi_drop_handler(uint32_t intid) {
+  gicv3_eoi(intid); /* EOI first: mmio at the flipped window, pre-drop */
+  bootmmu_drop_trampoline();
+  __atomic_or_fetch(&smp_dropped_mask, 1u << this_cpu()->index,
+                    __ATOMIC_RELEASE);
+}
+
 void smp_ipi_init(void) {
   gicv3_register_handler(GICV3_SGI_RESCHED, sgi_resched_handler);
   gicv3_register_handler(SGI_ECHO, sgi_echo_handler);
+  gicv3_register_handler(SGI_TRAMP_DROP, sgi_drop_handler);
+}
+
+/* --- R2.2 acceptance: leave the identity world, everywhere --- */
+
+void smp_drop_trampolines(void) {
+  serial_puts("\nR2.2: leaving the identity world\n");
+
+  /* Flip the device window first: from here every MMIO access goes
+   * through the direct map, which TTBR1 serves on every core — the flip
+   * is valid for all cores at once, no rendezvous needed (the trampoline
+   * windows simply keep working where still installed). */
+  mmio_window_flip();
+  serial_puts("R2.2: device window flipped to the direct map\n");
+
+  /* Then drop per core: BSP's own + SGI to the APs (their idle-loop WFI
+   * wakes; the handler drops theirs and publishes the bit). */
+  smp_dropped_mask = 0;
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+  if (ncpus > 1) gicv3_send_sgi(SGI_TRAMP_DROP, 0, true /* all but self */);
+  bootmmu_drop_trampoline();
+  __atomic_or_fetch(&smp_dropped_mask, 1u << 0, __ATOMIC_RELEASE);
+
+  uint64_t deadline = arch_timer_counter() + arch_timer_freq(); /* 1 s */
+  uint32_t all = (1u << ncpus) - 1;
+  while (__atomic_load_n(&smp_dropped_mask, __ATOMIC_ACQUIRE) != all) {
+    if (arch_timer_counter() > deadline) {
+      serial_puts(
+          "R2.2: trampoline drop TIMEOUT — some core still "
+          "identity-mapped\n");
+      return;
+    }
+  }
+
+  serial_printf(
+      "R2.2: trampoline dropped on all %u cores — kernel runs at "
+      "the link VA\n",
+      (uint64_t)ncpus);
 }
 
 /* --- bring-up --- */
@@ -154,7 +208,11 @@ void smp_start_secondaries(void) {
 
   unsigned online = 1; /* the BSP */
   for (unsigned i = 1; i < smp.count; i++) {
-    int32_t rc = psci_cpu_on(smp.mpidr[i], (uintptr_t)secondary_entry, i);
+    int32_t rc = psci_cpu_on(smp.mpidr[i],
+                             /* CPU_ON takes the PHYSICAL entry address —
+                              * secondary_entry's link VA is a high-half
+                              * address the released core cannot fetch. */
+                             kva_to_pa((uintptr_t)secondary_entry), i);
     if (rc != PSCI_SUCCESS) {
       serial_printf("psci: CPU_ON core %u failed (%d)\n", (uint64_t)i,
                     (int64_t)rc);

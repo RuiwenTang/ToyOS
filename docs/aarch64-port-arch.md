@@ -209,6 +209,62 @@ Decisions taken with R2.1 (the open questions from planning):
 - **Deferred to R2.2's blueprint text**: kernel VA layout (higher-half
   base, direct-map window size, ASID plan details).
 
+R2.2 design (written before implementation, per the blueprint-first rule):
+
+**Kernel VA layout** — 4 KiB granule, 48-bit VA (T0SZ = T1SZ = 16), 4
+levels. TTBR1 owns the top half and is loaded at boot, never switched.
+
+| Region | Base (L0 slot) | Size | Contents |
+|---|---|---|---|
+| direct map | `0xFFFF800000000000` (slot 256) | 512 GiB window over PA `[0, 512 GiB)` | `va = pa + KERNEL_DM_BASE`; RAM banks Normal WB RWX-less (PXN), rest Device — covers every MMIO PA on both targets |
+| kernel image | `0xFFFFFFFF80000000` (slot 511, L1 #510) | 1 GiB | link base `+0x40` (boot header), EL1 RW; 4 KiB pages — the arm64 `text_offset` 0x80000 is NOT 2 MiB-aligned, so block mapping the image is out |
+| kernel heap | `0xFFFFFFFF40000000` (slot 511, L1 #509) | 1 GiB | reserved now, mapped from R2.4 (ToyOS64's KERNEL_HEAP_START constant) |
+| kstack | `0xFFFFFFFF00000000` (slot 511, L1 #508) | 1 GiB | guarded stacks; guard page = L3 entry simply absent |
+
+**Two-tree boot + switchover.** The static boot tables become two trees:
+TTBR0 = identity trampoline (the executing window: image+stacks at PA,
+MMIO slot Device), TTBR1 = the kernel tree above (root and DM/image
+levels static in .bss; TTBR1 root stays static forever — it never
+switches, so the root needs no pmm phase-in; per-4K kstack/L3 levels are
+pmm-allocated from kstack_init onward via the kernel-tree walker).
+
+Positioning discipline (why each phase is safe):
+- Pre-MMU asm: ADRP/`adr` (PC-relative) only — never `ldr =symbol`
+  (absolute = high VA = unmapped). entry.S computes the load-vs-link
+  delta once and applies it to the boot stack / .bss bounds.
+- C is safe at any base: non-PIC aarch64 references globals via
+  ADRP+ADD, which resolves against the running PC — low while executing
+  low (identity covers it), high after the jump.
+- Switchover (BSP): build both trees → enable MMU with both TTBRs →
+  `ldr x30, =high_target; br x30` (the one legal absolute) → re-arm
+  VBAR/SP at high VAs. In the overlap window BOTH maps are live, so
+  nothing is invalid on either side of the jump.
+- Switchover (AP): PSCI CPU_ON takes the *physical* entry address
+  (`secondary_entry` link VA − delta). The AP enables both TTBRs from
+  the shared static trees and jumps high immediately; only PC-relative
+  addressing before the MMU is on.
+- Trampoline drop: after all cores run high (post IPI-echo), each core
+  loads an empty TTBR0 root + local `tlbi vmalle1`. The MMIO access
+  window flips from identity (offset 0) to DM (`+KERNEL_DM_BASE`) at a
+  single point before the drops — valid for everyone because TTBR1 (DM)
+  is shared and already on; the static trampoline tables stay in .bss so
+  late AP enables still work. Identity is never re-enabled: from R2.2 on
+  the kernel executes and touches devices purely at high VAs.
+
+**Other R2.2 pieces**: kstack.c real port (dedicated VA region, one
+unmapped guard page per slot, pmm pages, free-list parked in free
+slots — same protocol as upstream); trap-side guard detection (data
+abort FAR inside the kstack region → stack-overflow report + thread
+kill, not a halt); kernel `__clear_cache` (dc cvau → ic ivau → dsb +
+isb) for R4's JIT; ASID 0 for everything + `tlbi vmalle1is` remains the
+R2.4 starting discipline (per-process ASIDs after fork works).
+
+**R2.2 acceptance**: `pixi run smoke` + `smoke-tcg` green `-smp 4` at the
+new VA with new R2.2 PASS lines (higher-half switch on every core,
+trampoline dropped on every core, deliberate guard-page overflow faulted
+and killed the thread instead of corrupting a neighbour); host GTest
+still green; U-Boot/TCG path boots at the new VA.
+
 R1 staging notes (scheduler slice): the MMU goes on at boot via a static
 identity map (`kernel/arch/aarch64/bootmmu.c`) — RAM Normal WB, MMIO
 Device — because Device memory does not support atomics/exclusives and the

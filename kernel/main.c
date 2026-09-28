@@ -2,18 +2,22 @@
  * main.c — kernel C entry point (aarch64)
  *
  * entry.S has already settled the core to EL1, cleared .bss and set up the
- * boot stack; kmain receives the DTB pointer from the boot contract (x0).
+ * boot stack; kmain_low receives the DTB pointer from the boot contract
+ * (x0, a physical address).
  *
- * Boot order (R2.1 shape, mirroring ToyOS64's kernel_main for everything
- * this slice ports):
- *   serial → FDT + memmap discovery (physical memory, pre-MMU: plain
- *   loads) → MMU (identity map of the discovered banks) → GIC → timer →
- *   percpu → pmm (+ smoke) → heap (pmm provider) → kstack → sleep →
- *   sched_init (+ smoke workers) → timer arm → PSCI bring-up → SGI echo →
- *   per-core workers → sched_start
- * All with IRQs masked until sched_start (except the bounded echo-test
- * window, safe because pre-start ticks are gated to EOI+reload). From
- * sched_start on, kmain's context IS the boot/idle thread.
+ * Boot order (R2.2 shape):
+ *   kmain_low (executing at the physical load base, identity trampoline):
+ *     serial → FDT + memmap discovery → bootmmu (BOTH trees) → jump to
+ *     the link VA (bootmmu_to_high)
+ *   kmain_high (the link VA, kernel tree):
+ *     DTB dump → SVC smoke → SMP probe → percpu → GIC → timer → pmm (+
+ *     smoke) → heap (pmm provider) → kstack (real, guarded) → sleep →
+ *     sched_init (+ smoke workers) → timer arm → PSCI bring-up → SGI echo
+ *     → device-window flip + per-core trampoline drop → guard-overflow
+ *     smoke threads → sched_start
+ * All with IRQs masked until sched_start (except the bounded echo/drop
+ * windows, safe because pre-start ticks are gated to EOI+reload). From
+ * sched_start on, kmain_high's context IS the boot/idle thread.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -22,7 +26,9 @@
 #include <toyos/arch/aarch64/bootmmu.h>
 #include <toyos/arch/aarch64/cpu.h>
 #include <toyos/arch/aarch64/gicv3.h>
+#include <toyos/arch/aarch64/kva.h>
 #include <toyos/arch/aarch64/smp.h>
+#include <toyos/arch/aarch64/trap.h>
 #include <toyos/kernel/atomic.h>
 #include <toyos/kernel/fdt.h>
 #include <toyos/kernel/heap.h>
@@ -35,9 +41,11 @@
 #include <toyos/kernel/timer.h>
 #include <toyos/kernel/types.h>
 
-/* Whole-image extent from the linker (header slot through the boot stack;
- * .bss and the AP boot stacks live inside) — reserved from the pmm. */
+/* Whole-image extent from the linker (link VAs; header slot through the
+ * boot stack, .bss and the AP boot stacks live inside). */
 extern const char __kernel_start[], __kernel_end[];
+
+void kmain_high(uintptr_t dtb_pa); /* kmain_low's high-VA continuation */
 
 #define SMOKE_THREADS 3
 #define SMOKE_ITERS 3
@@ -112,15 +120,52 @@ static void smp_worker(void* arg) {
   thread_exit();
 }
 
-/* --- R2.1 pmm smoke (acceptance: "heap runs on pmm" preconditions) ---
+/* --- R2.2 acceptance: guard-page overflow faults and kills ---
  *
- * Accounting + contiguity + a write through the identity map: alloc/free
+ * The overflow worker walks a volatile write pointer down from its own
+ * frame, half-page by half-page, until it steps into its slot's guard
+ * page — the unmapped L3 entry turns the store into a data abort, traps.c
+ * recognises the kstack-region FAR, and thread_exit() kills it. The
+ * witness (a separate, healthy thread) polls the kill counter and prints
+ * the PASS line, proving the kernel survived the overflow intact. */
+static void overflow_worker(void* arg) {
+  (void)arg;
+  volatile char probe = 0;
+  (void)probe;
+  char* p = (char*)((uintptr_t)&probe & ~(uintptr_t)(PAGE_SIZE - 1));
+
+  for (;;) {
+    p -= 512;
+    *p = 1; /* until the guard page faults */
+  }
+}
+
+static void overflow_witness(void* arg) {
+  (void)arg;
+  uint64_t deadline = timer_get_ticks() + 200; /* ~2 s at 100 Hz */
+
+  while (kstack_guard_hits == 0) {
+    if (timer_get_ticks() > deadline) {
+      serial_puts("R2.2: kstack guard smoke FAIL — overflow never trapped\n");
+      thread_exit();
+    }
+  }
+
+  serial_puts(
+      "R2.2: kstack guard smoke PASS — overflow faulted at the guard and "
+      "the thread was killed, kernel intact\n");
+  thread_exit();
+}
+
+/* --- R2.1 pmm smoke (heap-on-pmm preconditions) ---
+ *
+ * Accounting + contiguity + a write through the direct map: alloc/free
  * must move the free count by exactly the right amounts and come back to
  * the baseline, the 4-page alloc must be physically contiguous, and both
  * ends must be writable through pmm_phys_to_virt (a Normal-WB-typed page
- * per bootmmu — a mis-typed or unmapped page faults right here instead of
- * inside the scheduler later). Runs before kernel_heap_init so the heap's
- * own pages are never interleaved with the smoke's. */
+ * per the kernel tree — a mis-typed or unmapped page faults right here
+ * instead of inside the scheduler later). Runs before kernel_heap_init so
+ * the heap's own pages are never interleaved with the smoke's. */
 static int pmm_smoke(void) {
   size_t free0 = pmm_free_page_count();
 
@@ -133,7 +178,7 @@ static int pmm_smoke(void) {
   if (pmm_free_page_count() != free0 - 5) return 0;
   /* the two allocations must not overlap */
   if (p1 >= p4 && p1 < p4 + 4 * PAGE_SIZE) return 0;
-  for (int i = 0; i < 4; i += 3) { /* first + last page writable */
+  for (int i = 0; i < 4; i += 3) { /* first + last page writable via DM */
     volatile uint64_t* page = pmm_phys_to_virt(p4 + (uintptr_t)i * PAGE_SIZE);
     *page = 0x524F5953ull; /* "SYOR" */
     if (*page != 0x524F5953ull) return 0;
@@ -150,22 +195,31 @@ static int pmm_smoke(void) {
   return pmm_free_page_count() == free0;
 }
 
-void kmain(const void* dtb) {
+/*
+ * kmain_low — everything that runs at the physical load base.
+ *
+ * The pre-MMU subset is exactly what stays legal on all-Device memory:
+ * plain (narrow, volatile where it matters) loads and single-core unlocked
+ * serial. Memory discovery must precede bootmmu so the tables map real
+ * banks; the DTB pointer and the linker-extent conversions all use the
+ * physical world's arithmetic (kimage_offset for image VAs).
+ */
+void kmain_low(const void* dtb) {
   uint32_t size;
+  /* Image PA base: KERNEL_IMAGE_BASE (constant link VA) minus the offset
+   * entry.S published. NOT kva_to_pa(&symbol) — see the kva.h warning. */
+  uint64_t image_pa = KERNEL_IMAGE_BASE - kimage_offset;
 
   serial_init();
-  serial_puts("\nToyOS aarch64 R2\n");
+  serial_puts("\nToyOS aarch64 R2 (higher-half)\n");
   serial_puts("boot EL: EL");
   serial_print_dec(current_el());
   serial_puts(", dtb @ ");
   serial_print_hex((uintptr_t)dtb);
+  serial_puts(", image at ");
+  serial_print_hex(image_pa);
   serial_puts("\n");
 
-  /* Physical memory discovery runs pre-MMU: the DTB walk is plain (narrow,
-   * volatile where it matters) loads and everything printed below is
-   * single-core unlocked serial — the two things that stay legal on
-   * all-Device memory. bootmmu then maps the discovered banks instead of
-   * a hardcoded 1 GiB. */
   size = fdt_valid(dtb);
   if (size == 0) {
     serial_puts("fdt: invalid blob, halting\n");
@@ -175,15 +229,37 @@ void kmain(const void* dtb) {
   serial_print_dec(size);
   serial_puts("\n");
 
-  memmap_init(dtb, (uint64_t)(uintptr_t)__kernel_start,
-              (uint64_t)(uintptr_t)__kernel_end,
-              (uint64_t)(uintptr_t)dtb + size);
+  /* Image PA extent. KERNEL_IMAGE_BASE is an absolute constant (its link
+   * VA), and the symbol difference is position-independent — C symbol
+   * references here resolve to run addresses (we are low), so kva_to_pa
+   * must NOT be applied to them (double-counting; the kva.h warning). */
+  {
+    uint64_t image_size =
+        (uint64_t)(uintptr_t)__kernel_end - (uint64_t)(uintptr_t)__kernel_start;
+    memmap_init(dtb, image_pa, image_pa + image_size,
+                (uint64_t)(uintptr_t)dtb + size);
+  }
 
   {
     size_t nbanks = 0;
     const mem_region_t* banks = memmap_banks(&nbanks);
     bootmmu_init(banks, nbanks);
   }
+
+  /* Both trees live: transfer to the link VA. The boot stack and VBAR
+   * move with us (same memory, new addresses); execution never returns
+   * below the fold. */
+  bootmmu_to_high((uintptr_t)dtb);
+}
+
+/*
+ * kmain_high — everything after the switchover. @dtb_pa is the physical
+ * handoff pointer; RAM objects are reached through the direct map.
+ */
+void kmain_high(uintptr_t dtb_pa) {
+  const void* dtb = (const void*)kva_dm(dtb_pa);
+
+  serial_puts("R2.2: executing at the link VA — higher-half switch OK\n");
 
   fdt_node_t chosen = fdt_find_node(dtb, "/chosen");
   serial_puts("fdt: /chosen node @ ");
@@ -223,7 +299,7 @@ void kmain(const void* dtb) {
   if (pmm_smoke()) {
     serial_puts(
         "R2.1: pmm smoke PASS — alloc/free accounting + contiguity "
-        "+ identity-map writeback\n");
+        "+ direct-map writeback\n");
   } else {
     serial_puts("R2.1: pmm smoke FAIL, halting\n");
     cpu_halt();
@@ -231,7 +307,7 @@ void kmain(const void* dtb) {
 
   serial_puts("\nR1: scheduler bring-up\n");
   kernel_heap_init();
-  kstack_init();
+  kstack_init(); /* real guarded allocator (dedicated VA region) */
   sleep_init();
   sched_init(); /* creates every AP's idle thread (ncpus slots) */
 
@@ -244,9 +320,19 @@ void kmain(const void* dtb) {
   smp_start_secondaries(); /* PSCI CPU_ON + online handshake */
   smp_echo_test();         /* R1 acceptance: IPI echo */
 
+  /* R2.2 acceptance: device window to the direct map, then the identity
+   * trampoline away on every core — from here nothing below the fold
+   * exists anywhere. */
+  smp_drop_trampolines();
+
   for (unsigned c = 1; c < ncpus; c++)
     for (unsigned w = 0; w < SMP_WORKERS_PER_CORE; w++)
       thread_create_on(c, "smpw", smp_worker, (void*)(uintptr_t)((c << 8) | w));
+
+  /* Guard-overflow proof (after the worker smoke so the R1 lines land
+   * first; serial order between them is not asserted anyway). */
+  thread_create("ovfw", overflow_worker, NULL);
+  thread_create("ovwt", overflow_witness, NULL);
 
   /* Unmasks IRQs, swaps onto the boot kstack, first schedule() — never
    * returns. The workers above run to completion (tick preempted), then

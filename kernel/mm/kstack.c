@@ -1,41 +1,49 @@
 /*
- * kstack.c — Kernel thread stack allocator (R1 static-region shim)
+ * kstack.c — Kernel thread stack allocator (dedicated pages + guard page)
  *
- * Same allocation protocol as ToyOS64's kstack.c — bump + free-list over a
- * dedicated region, one guard page below each stack's usable pages, the
- * free-list node parked in a free slot's first usable page — but the region
- * is a static array: with the MMU off (paging is R2) there is no pmm/vmm to
- * carve pages from and no way to leave the guard page unmapped, so an
- * overflow runs silently until R2 replaces this file with the upstream copy
- * wired to the real mm.
+ * Ported from ToyOS64 (BSD-3 relicense, sole author): bump allocator over
+ * a fixed kernel-VA region; each allocation is [guard page (unmapped)]
+ * [npages usable RW pages]. The guard page catches downward stack overflow
+ * as an immediate synchronous abort (invalid L3 entry), and traps.c turns
+ * that into a thread kill.
+ *
+ * The region lives in TTBR1 slot 511 / L1 #508 (kva.h), which the direct
+ * map (slot 256) can never cover, so the guard's unmapped entry is never
+ * bypassed by the all-physical alias — the aarch64 restatement of
+ * upstream's "PML4 entry 511 vs HHDM entry 256" note. Unlike R1's static
+ * shim, pages are real: pmm frames mapped 4 KiB at a time by the kernel
+ * tree walker.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <toyos/arch/aarch64/kva.h>
+#include <toyos/arch/aarch64/paging.h>
 #include <toyos/kernel/kstack.h>
 #include <toyos/kernel/list.h>
+#include <toyos/kernel/pmm.h>
 #include <toyos/kernel/serial.h>
 #include <toyos/kernel/spinlock.h>
 #include <toyos/kernel/types.h>
 
-/* 2 MiB static region: ~104 slots of the standard 16 KiB stack + guard. */
-#define KSTACK_REGION_SIZE 0x200000u
+#define KSTACK_REGION_START KERNEL_KSTACK_BASE
+#define KSTACK_REGION_SIZE KERNEL_KSTACK_SIZE
 
-static uint8_t kstack_region[KSTACK_REGION_SIZE] __attribute__((aligned(4096)));
 static uintptr_t kstack_next;
 static spinlock_t kstack_lock;
 static struct list_node
     kstack_free_list; /* freed slots, reused before bumping */
 
 void kstack_init(void) {
-  kstack_next = (uintptr_t)kstack_region;
+  kstack_next = KSTACK_REGION_START;
   spin_lock_init(&kstack_lock);
   list_init(&kstack_free_list);
 
-  serial_puts("[kstack] static region @ ");
-  serial_print_hex((uint64_t)kstack_region);
-  serial_puts(
-      ", size 0x200000 (2 MiB, R1 shim — real allocator lands with R2 mm)\n");
+  serial_puts("[kstack] region @ ");
+  serial_print_hex(KSTACK_REGION_START);
+  serial_puts(", size ");
+  serial_print_hex(KSTACK_REGION_SIZE);
+  serial_puts(" (guarded slots, guard page unmapped)\n");
 }
 
 void* kstack_alloc(size_t npages) {
@@ -43,10 +51,11 @@ void* kstack_alloc(size_t npages) {
   uintptr_t bytes = total_pages * PAGE_SIZE;
 
   spin_lock_irqsave(&kstack_lock);
-  /* Reuse a freed slot if available. All R1 stacks are THREAD_STACK_PAGES
-   * (thread_alloc is the only caller). The list_node lives in the slot's
-   * first usable page (base + guard), empty while the slot is free (the
-   * stack grows down from the top). */
+  /* Reuse a freed slot if available. All stacks are THREAD_STACK_PAGES
+   * (thread_alloc is the only caller); a freed slot's pages stay mapped,
+   * so reuse needs no pmm_alloc/kernel_map_page. The list_node lives in
+   * the slot's first usable page (base + guard), empty while the slot is
+   * free (the stack grows down from the top). */
   if (!list_empty(&kstack_free_list)) {
     struct list_node* n = kstack_free_list.next;
     list_remove(n);
@@ -54,22 +63,38 @@ void* kstack_alloc(size_t npages) {
     uintptr_t reuse = (uintptr_t)n - KSTACK_GUARD_PAGES * PAGE_SIZE;
     return (void*)reuse;
   }
-  if (kstack_next + bytes > (uintptr_t)kstack_region + KSTACK_REGION_SIZE) {
+  if (kstack_next + bytes > KSTACK_REGION_START + KSTACK_REGION_SIZE) {
     spin_unlock_irqrestore(&kstack_lock);
+    serial_puts("[kstack] FATAL: kstack region exhausted\n");
     return NULL;
   }
-  uintptr_t slot = kstack_next;
+  uintptr_t base = kstack_next;
   kstack_next += bytes;
   spin_unlock_irqrestore(&kstack_lock);
-  return (void*)slot;
+
+  /* Map the usable pages (guard page deliberately left unmapped). */
+  for (size_t i = 0; i < npages; i++) {
+    uintptr_t phys = pmm_alloc();
+    if (!phys) {
+      serial_puts("[kstack] FATAL: out of physical pages\n");
+      return NULL;
+    }
+    uintptr_t virt = base + (KSTACK_GUARD_PAGES + i) * PAGE_SIZE;
+    if (kernel_map_page(virt, phys, PTE_KERNEL_DATA_FLAGS) < 0) {
+      serial_puts("[kstack] FATAL: kernel_map_page failed\n");
+      return NULL;
+    }
+  }
+
+  return (void*)base;
 }
 
 void kstack_free(void* base) {
   if (!base) return; /* boot thread's boot stack is not ours to free */
-
-  /* Park the free-list node in the slot's first usable page (above the
-   * guard slot) — the same trick as upstream, so kstack_alloc's reuse
-   * path recovers the base with the same arithmetic. */
+  /* Return the slot to the free-list. The list_node is stashed in the
+   * slot's first usable page (base + guard) — unused while the slot is
+   * free. Pages stay mapped and are reused verbatim by the next
+   * kstack_alloc. */
   struct list_node* n =
       (struct list_node*)((uintptr_t)base + KSTACK_GUARD_PAGES * PAGE_SIZE);
 

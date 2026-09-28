@@ -32,11 +32,11 @@
 
 /* --- Internal state (all BSS-allocated) --- */
 
-static uint8_t* pmm_bitmap;       /* bitmap buffer (via pmm_phys_to_virt) */
-static size_t pmm_bitmap_size;    /* number of bytes in the bitmap */
-static size_t pmm_max_page;       /* highest page index (max_phys / PAGE_SIZE) */
-static size_t pmm_total;          /* total physical pages managed */
-static size_t pmm_free_count;     /* currently free pages */
+static uint8_t* pmm_bitmap;    /* bitmap buffer (via pmm_phys_to_virt) */
+static size_t pmm_bitmap_size; /* number of bytes in the bitmap */
+static size_t pmm_max_page;    /* highest page index (max_phys / PAGE_SIZE) */
+static size_t pmm_total;       /* total physical pages managed */
+static size_t pmm_free_count;  /* currently free pages */
 static struct refcount_t* page_refcount; /* per-frame refcount (CoW fork) */
 static spinlock_t pmm_lock; /* serialises alloc/free bitmap mutation */
 
@@ -132,8 +132,7 @@ void pmm_init(const mem_region_t* usable, size_t n) {
 
   /* Step 6: mark the bitmap's own pages used (it sits inside a region we
    * just marked free). */
-  uint64_t bitmap_end_phys = align_up(bitmap_phys + pmm_bitmap_size,
-                                      PAGE_SIZE);
+  uint64_t bitmap_end_phys = align_up(bitmap_phys + pmm_bitmap_size, PAGE_SIZE);
   for (uint64_t addr = align_down(bitmap_phys, PAGE_SIZE);
        addr < bitmap_end_phys; addr += PAGE_SIZE) {
     size_t idx = (size_t)(addr / PAGE_SIZE);
@@ -172,11 +171,9 @@ void pmm_init(const mem_region_t* usable, size_t n) {
       /* Bitmap's region: place the table right after the bitmap. */
       uint64_t after_bitmap =
           align_up(bitmap_phys + pmm_bitmap_size, PAGE_SIZE);
-      if (after_bitmap + refcount_bytes <=
-          usable[i].base + usable[i].len) {
+      if (after_bitmap + refcount_bytes <= usable[i].base + usable[i].len) {
         rc_phys = after_bitmap;
-        page_refcount =
-            (struct refcount_t*)pmm_phys_to_virt(rc_phys);
+        page_refcount = (struct refcount_t*)pmm_phys_to_virt(rc_phys);
         break;
       }
       continue; /* bitmap region cannot also hold the refcount table */
@@ -279,8 +276,7 @@ uintptr_t pmm_alloc_pages(size_t count) {
     return 0; /* no contiguous region found */
   }
 
-  for (size_t i = 0; i < count; i++)
-    bitmap_set(pmm_bitmap, (size_t)idx + i);
+  for (size_t i = 0; i < count; i++) bitmap_set(pmm_bitmap, (size_t)idx + i);
 
   pmm_free_count -= count;
   spinlock_release(&pmm_lock);
@@ -289,19 +285,14 @@ uintptr_t pmm_alloc_pages(size_t count) {
 }
 
 void pmm_free_pages(uintptr_t phys, size_t count) {
-  for (size_t i = 0; i < count; i++)
-    pmm_free(phys + (uintptr_t)i * PAGE_SIZE);
+  for (size_t i = 0; i < count; i++) pmm_free(phys + (uintptr_t)i * PAGE_SIZE);
 }
 
 /* --- Diagnostics --- */
 
-size_t pmm_total_pages(void) {
-  return pmm_total;
-}
+size_t pmm_total_pages(void) { return pmm_total; }
 
-size_t pmm_free_page_count(void) {
-  return pmm_free_count;
-}
+size_t pmm_free_page_count(void) { return pmm_free_count; }
 
 /* --- Reference counting (Copy-on-Write fork) --- */
 
